@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -22,27 +23,29 @@ import {
   MessageCircle,
 } from "lucide-react";
 import RyutaChat from "@/components/chat/RyutaChat";
+import logo from "@/assets/logo.png";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/new-trade", label: "New Trade", icon: PlusCircle },
-  { path: "/journal", label: "Trade Journal", icon: BookOpen },
-  { path: "/analytics", label: "Analytics", icon: BarChart3 },
-  { path: "/templates", label: "Templates", icon: FileStack },
-  { path: "/backtesting", label: "Backtesting", icon: FlaskConical },
-  { path: "/risk-journal", label: "Risk Journal", icon: Brain },
-  { path: "/goals", label: "Goals", icon: Target },
-  { path: "/notes", label: "Daily Notes", icon: FileText },
-  { path: "/knowledge", label: "Knowledge Library", icon: Library },
-  { path: "/settings", label: "Settings", icon: Settings },
+  { path: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { path: "/new-trade", labelKey: "nav.newTrade", icon: PlusCircle },
+  { path: "/journal", labelKey: "nav.journal", icon: BookOpen },
+  { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+  { path: "/templates", labelKey: "nav.templates", icon: FileStack },
+  { path: "/backtesting", labelKey: "nav.backtesting", icon: FlaskConical },
+  { path: "/risk-journal", labelKey: "nav.riskJournal", icon: Brain },
+  { path: "/goals", labelKey: "nav.goals", icon: Target },
+  { path: "/notes", labelKey: "nav.notes", icon: FileText },
+  { path: "/knowledge", labelKey: "nav.knowledge", icon: Library },
+  { path: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -65,7 +68,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         >
           {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
-        <h1 className="text-lg font-bold text-primary">Mae Pla 🐟</h1>
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="Mae Pla" className="h-8 w-8" />
+          <span className="text-lg font-bold text-primary">Mae Pla</span>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -84,11 +90,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="p-6 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-primary flex items-center gap-2">
-            🐟 Mae Pla Green Pen
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1">แม่ปลา ปากกาเขียว</p>
+        <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
+          <img src={logo} alt="Mae Pla Green Pen" className="h-12 w-12" />
+          <div>
+            <h1 className="text-lg font-bold text-primary">{t("app.title")}</h1>
+            <p className="text-xs text-muted-foreground">{t("app.subtitle")}</p>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 h-[calc(100vh-180px)]">
@@ -109,7 +116,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   )}
                 >
                   <Icon className="h-5 w-5" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -126,7 +133,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+            {t("nav.signOut")}
           </Button>
         </div>
       </aside>

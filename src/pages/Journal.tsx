@@ -78,10 +78,10 @@ export default function Journal() {
               {trades.map((trade) => (
                 <TableRow key={trade.id} className="border-border">
                   <TableCell className="text-muted-foreground">{format(new Date(trade.trade_date), "MMM dd, yyyy")}</TableCell>
-                  <TableCell className="font-medium">{trade.pair}{trade.is_paper_trade && <Badge variant="outline" className="ml-2 text-paper border-paper">Paper</Badge>}</TableCell>
-                  <TableCell><Badge variant={trade.trade_type === "buy" ? "default" : "destructive"} className={trade.trade_type === "buy" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}>{trade.trade_type.toUpperCase()}</Badge></TableCell>
+                  <TableCell className="font-medium">{trade.pair}{trade.is_paper_trade && <Badge variant="outline" className="ml-2 text-paper border-paper">{t("journal.paper")}</Badge>}</TableCell>
+                  <TableCell><Badge variant={trade.trade_type === "buy" ? "default" : "destructive"} className={trade.trade_type === "buy" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}>{t(`tradeType.${trade.trade_type}`)}</Badge></TableCell>
                   <TableCell>{trade.entry_price || "-"}</TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize">{trade.status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{t(`status.${trade.status}`)}</Badge></TableCell>
                   <TableCell className={`text-right font-semibold ${(trade.profit_loss || 0) >= 0 ? "text-profit" : "text-loss"}`}>{trade.profit_loss !== null ? `${trade.profit_loss >= 0 ? "+" : ""}$${trade.profit_loss.toFixed(2)}` : "-"}</TableCell>
                 </TableRow>
               ))}

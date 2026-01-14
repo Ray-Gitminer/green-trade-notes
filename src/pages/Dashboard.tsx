@@ -331,7 +331,7 @@ export default function Dashboard() {
                             : "bg-destructive/20 text-destructive"
                         }
                       >
-                        {trade.trade_type.toUpperCase()}
+                        {t(`tradeType.${trade.trade_type}`)}
                       </Badge>
                       <div>
                         <p className="font-medium text-foreground">{trade.pair}</p>

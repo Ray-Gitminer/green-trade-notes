@@ -57,7 +57,7 @@ export default function RiskJournal() {
               <DialogHeader><DialogTitle>{t("riskJournal.sessionCheckin")}</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div><Label>{t("riskJournal.sessionType")}</Label><Select value={sessionForm.session_type} onValueChange={(v) => setSessionForm({ ...sessionForm, session_type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pre_session">{t("riskJournal.preSession")}</SelectItem><SelectItem value="post_session">{t("riskJournal.postSession")}</SelectItem></SelectContent></Select></div>
-                <div><Label>{t("riskJournal.mood")}</Label><Select value={sessionForm.mood} onValueChange={(v) => setSessionForm({ ...sessionForm, mood: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["happy", "neutral", "stressed", "tired", "excited", "anxious"].map(m => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>{t("riskJournal.mood")}</Label><Select value={sessionForm.mood} onValueChange={(v) => setSessionForm({ ...sessionForm, mood: v })}><SelectTrigger><SelectValue>{t(`mood.${sessionForm.mood}`)}</SelectValue></SelectTrigger><SelectContent>{["happy", "neutral", "stressed", "tired", "excited", "anxious"].map(m => <SelectItem key={m} value={m}>{t(`mood.${m}`)}</SelectItem>)}</SelectContent></Select></div>
                 <div><Label>{t("riskJournal.focusLevel")}: {sessionForm.focus_level[0]}/10</Label><Slider value={sessionForm.focus_level} onValueChange={(v) => setSessionForm({ ...sessionForm, focus_level: v })} min={1} max={10} /></div>
                 <div><Label>{t("riskJournal.notes")}</Label><Textarea value={sessionForm.notes} onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })} /></div>
                 <Button onClick={saveSession} className="w-full gradient-emerald">{t("riskJournal.saveSession")}</Button>
@@ -84,7 +84,7 @@ export default function RiskJournal() {
         <TabsContent value="sessions" className="mt-4">
           <div className="space-y-3">
             {sessions.map((s) => (
-              <Card key={s.id} className="glass-card"><CardContent className="p-4 flex items-center justify-between"><div><p className="font-medium capitalize">{s.session_type.replace("_", " ")}</p><p className="text-sm text-muted-foreground">{format(new Date(s.created_at), "MMM dd, yyyy HH:mm")}</p></div><div className="text-right"><p className="text-sm capitalize">{t("riskJournal.mood")}: {s.mood}</p><p className="text-sm text-muted-foreground">{t("riskJournal.focusLevel")}: {s.focus_level}/10</p></div></CardContent></Card>
+              <Card key={s.id} className="glass-card"><CardContent className="p-4 flex items-center justify-between"><div><p className="font-medium">{t(`sessionType.${s.session_type}`)}</p><p className="text-sm text-muted-foreground">{format(new Date(s.created_at), "MMM dd, yyyy HH:mm")}</p></div><div className="text-right"><p className="text-sm">{t("riskJournal.mood")}: {t(`mood.${s.mood}`)}</p><p className="text-sm text-muted-foreground">{t("riskJournal.focusLevel")}: {s.focus_level}/10</p></div></CardContent></Card>
             ))}
             {sessions.length === 0 && <p className="text-muted-foreground text-center py-8">{t("riskJournal.noSessions")}</p>}
           </div>

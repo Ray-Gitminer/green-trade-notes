@@ -166,6 +166,30 @@ const translations: Translations = {
   "riskJournal.riskDecisions": { th: "การตัดสินใจความเสี่ยง", en: "Risk Decisions" },
   "riskJournal.noSessions": { th: "ยังไม่มีบันทึกเซสชัน", en: "No session logs yet" },
   "riskJournal.noDecisions": { th: "ยังไม่มีบันทึกการตัดสินใจ", en: "No decisions logged yet" },
+  // Moods for Risk Journal
+  "mood.happy": { th: "มีความสุข", en: "Happy" },
+  "mood.neutral": { th: "ปกติ", en: "Neutral" },
+  "mood.stressed": { th: "เครียด", en: "Stressed" },
+  "mood.tired": { th: "เหนื่อย", en: "Tired" },
+  "mood.excited": { th: "ตื่นเต้น", en: "Excited" },
+  "mood.anxious": { th: "กังวล", en: "Anxious" },
+  // Sleep quality
+  "sleep.good": { th: "ดี", en: "Good" },
+  "sleep.average": { th: "ปานกลาง", en: "Average" },
+  "sleep.poor": { th: "แย่", en: "Poor" },
+  // Trade statuses
+  "status.planned": { th: "วางแผน", en: "Planned" },
+  "status.open": { th: "เปิดอยู่", en: "Open" },
+  "status.closed": { th: "ปิดแล้ว", en: "Closed" },
+  "status.cancelled": { th: "ยกเลิก", en: "Cancelled" },
+  // Trade types
+  "tradeType.buy": { th: "ซื้อ", en: "BUY" },
+  "tradeType.sell": { th: "ขาย", en: "SELL" },
+  // Paper trade
+  "journal.paper": { th: "จำลอง", en: "Paper" },
+  // Session types
+  "sessionType.pre_session": { th: "ก่อนเทรด", en: "Pre-Session" },
+  "sessionType.post_session": { th: "หลังเทรด", en: "Post-Session" },
 
   // Goals
   "goals.title": { th: "เป้าหมายการเทรด", en: "Trading Goals" },

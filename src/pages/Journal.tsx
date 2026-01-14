@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,13 +12,12 @@ import { BookOpen, Download, Filter } from "lucide-react";
 
 export default function Journal() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [trades, setTrades] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) fetchTrades();
-  }, [user, filter]);
+  useEffect(() => { if (user) fetchTrades(); }, [user, filter]);
 
   const fetchTrades = async () => {
     if (!user) return;
@@ -45,19 +45,19 @@ export default function Journal() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><BookOpen className="h-6 w-6" />Trade Journal</h1>
-          <p className="text-muted-foreground">Review and analyze your trading history</p>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><BookOpen className="h-6 w-6" />{t("journal.title")}</h1>
+          <p className="text-muted-foreground">{t("journal.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-32"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Trades</SelectItem>
-              <SelectItem value="live">Live Only</SelectItem>
-              <SelectItem value="paper">Paper Only</SelectItem>
+              <SelectItem value="all">{t("journal.allTrades")}</SelectItem>
+              <SelectItem value="live">{t("journal.liveOnly")}</SelectItem>
+              <SelectItem value="paper">{t("journal.paperOnly")}</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+          <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />{t("journal.exportCSV")}</Button>
         </div>
       </div>
 
@@ -66,12 +66,12 @@ export default function Journal() {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead>Date</TableHead>
-                <TableHead>Pair</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Entry</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">P/L</TableHead>
+                <TableHead>{t("journal.date")}</TableHead>
+                <TableHead>{t("newTrade.pair")}</TableHead>
+                <TableHead>{t("journal.type")}</TableHead>
+                <TableHead>{t("journal.entry")}</TableHead>
+                <TableHead>{t("journal.status")}</TableHead>
+                <TableHead className="text-right">{t("journal.pl")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,7 +85,7 @@ export default function Journal() {
                   <TableCell className={`text-right font-semibold ${(trade.profit_loss || 0) >= 0 ? "text-profit" : "text-loss"}`}>{trade.profit_loss !== null ? `${trade.profit_loss >= 0 ? "+" : ""}$${trade.profit_loss.toFixed(2)}` : "-"}</TableCell>
                 </TableRow>
               ))}
-              {trades.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No trades found</TableCell></TableRow>}
+              {trades.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("journal.noTrades")}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,12 +13,9 @@ import {
   BarChart3,
   PlusCircle,
   BookOpen,
-  Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -46,6 +44,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -67,7 +66,6 @@ export default function Dashboard() {
     if (!user) return;
 
     try {
-      // Fetch live trades only for stats
       const { data: tradesData, error } = await supabase
         .from("trades")
         .select("*")
@@ -79,7 +77,6 @@ export default function Dashboard() {
 
       setTrades(tradesData || []);
 
-      // Calculate stats
       const closedTrades = (tradesData || []).filter(t => t.status === "closed");
       const wins = closedTrades.filter(t => (t.profit_loss || 0) > 0);
       const losses = closedTrades.filter(t => (t.profit_loss || 0) < 0);
@@ -93,8 +90,7 @@ export default function Dashboard() {
         profitFactor: totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? Infinity : 0,
       });
 
-      // Build equity curve
-      let runningEquity = 10000; // Starting balance
+      let runningEquity = 10000;
       const equity = (tradesData || [])
         .filter(t => t.status === "closed")
         .map(t => {
@@ -120,13 +116,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's your trading overview.
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h1>
+          <p className="text-muted-foreground">{t("dashboard.welcome")}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -134,29 +127,28 @@ export default function Dashboard() {
             className="gradient-emerald hover:opacity-90"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
-            New Trade
+            {t("nav.newTrade")}
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Trades
+              {t("dashboard.totalTrades")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats.totalTrades}</div>
-            <p className="text-xs text-muted-foreground mt-1">Closed positions</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("dashboard.closedPositions")}</p>
           </CardContent>
         </Card>
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Win Rate
+              {t("dashboard.winRate")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -166,14 +158,14 @@ export default function Dashboard() {
               </span>
               <Target className="h-5 w-5 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Success ratio</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("dashboard.successRatio")}</p>
           </CardContent>
         </Card>
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Net Profit
+              {t("dashboard.netProfit")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -191,14 +183,14 @@ export default function Dashboard() {
                 <TrendingDown className="h-5 w-5 text-destructive" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Total P/L</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("dashboard.totalPL")}</p>
           </CardContent>
         </Card>
 
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Profit Factor
+              {t("dashboard.profitFactor")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -208,16 +200,15 @@ export default function Dashboard() {
               </span>
               <BarChart3 className="h-5 w-5 text-accent" />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Win/Loss ratio</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("dashboard.winLossRatio")}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Equity Curve */}
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-foreground">
-            Equity Curve
+            {t("dashboard.equityCurve")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -262,13 +253,11 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Quick Actions & Recent Trades */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Quick Actions */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-foreground">
-              Quick Actions
+              {t("dashboard.quickActions")}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
@@ -278,7 +267,7 @@ export default function Dashboard() {
               onClick={() => navigate("/new-trade")}
             >
               <PlusCircle className="h-6 w-6 text-primary" />
-              <span className="text-sm">New Trade</span>
+              <span className="text-sm">{t("nav.newTrade")}</span>
             </Button>
             <Button
               variant="outline"
@@ -286,7 +275,7 @@ export default function Dashboard() {
               onClick={() => navigate("/journal")}
             >
               <BookOpen className="h-6 w-6 text-primary" />
-              <span className="text-sm">View Journal</span>
+              <span className="text-sm">{t("nav.journal")}</span>
             </Button>
             <Button
               variant="outline"
@@ -294,7 +283,7 @@ export default function Dashboard() {
               onClick={() => navigate("/goals")}
             >
               <Target className="h-6 w-6 text-accent" />
-              <span className="text-sm">Set Goals</span>
+              <span className="text-sm">{t("nav.goals")}</span>
             </Button>
             <Button
               variant="outline"
@@ -302,16 +291,15 @@ export default function Dashboard() {
               onClick={() => navigate("/analytics")}
             >
               <BarChart3 className="h-6 w-6 text-accent" />
-              <span className="text-sm">Analytics</span>
+              <span className="text-sm">{t("nav.analytics")}</span>
             </Button>
           </CardContent>
         </Card>
 
-        {/* Recent Trades */}
         <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-semibold text-foreground">
-              Recent Trades
+              {t("dashboard.recentTrades")}
             </CardTitle>
             <Button
               variant="ghost"
@@ -319,13 +307,13 @@ export default function Dashboard() {
               className="text-primary"
               onClick={() => navigate("/journal")}
             >
-              View All
+              {t("dashboard.viewAll")}
             </Button>
           </CardHeader>
           <CardContent>
             {recentTrades.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No closed trades yet. Start trading to see your history!
+                {t("dashboard.noTrades")}
               </p>
             ) : (
               <div className="space-y-3">

@@ -266,8 +266,8 @@ export default function NewTrade() {
             <div className="space-y-2">
               <Label>{t("newTrade.emotionalState")}</Label>
               <Select value={formData.emotionalState} onValueChange={(v) => setFormData({ ...formData, emotionalState: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{EMOTIONS.map(e => <SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>)}</SelectContent>
+                <SelectTrigger><SelectValue>{t(`emotion.${formData.emotionalState}`)}</SelectValue></SelectTrigger>
+                <SelectContent>{EMOTIONS.map(e => <SelectItem key={e} value={e}>{t(`emotion.${e}`)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">

@@ -19,6 +19,7 @@ import Goals from "./pages/Goals";
 import DailyNotes from "./pages/DailyNotes";
 import KnowledgeLibrary from "./pages/KnowledgeLibrary";
 import Settings from "./pages/Settings";
+import ChartAnalysis from "./pages/ChartAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -130,6 +131,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <KnowledgeLibrary />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chart-analysis"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ChartAnalysis />
                   </AppLayout>
                 </ProtectedRoute>
               }

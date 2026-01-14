@@ -93,6 +93,7 @@ export default function ChartAnalysis() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportStartDate, setExportStartDate] = useState<Date>(new Date());
   const [exportEndDate, setExportEndDate] = useState<Date>(new Date());
+  const [pdfFontSize, setPdfFontSize] = useState<number>(14);
   const [logs, setLogs] = useState<LogData[]>([]);
 
   const [autoPasteOpen, setAutoPasteOpen] = useState(false);
@@ -439,10 +440,32 @@ export default function ChartAnalysis() {
     
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 10;
+    const margin = 15;
     const contentWidth = pageWidth - margin * 2;
-    const imageWidth = (contentWidth - 8) / 3; // 3 images per row with gaps
-    const imageHeight = 40;
+    
+    // Font sizes based on user selection
+    const baseFontSize = pdfFontSize;
+    const titleFontSize = baseFontSize + 4;
+    const headerFontSize = baseFontSize + 2;
+    const smallFontSize = baseFontSize - 2;
+    const lineHeight = baseFontSize * 0.5;
+
+    // Helper to draw dotted line
+    const drawDottedLine = (y: number, startX: number = margin, endX: number = pageWidth - margin) => {
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineDashPattern([1, 1], 0);
+      doc.line(startX, y, endX, y);
+      doc.setLineDashPattern([], 0);
+    };
+
+    // Helper to add page break if needed
+    const checkPageBreak = (yPos: number, requiredSpace: number): number => {
+      if (yPos + requiredSpace > pageHeight - margin) {
+        doc.addPage();
+        return margin;
+      }
+      return yPos;
+    };
 
     for (let logIndex = 0; logIndex < data.length; logIndex++) {
       const log = data[logIndex];
@@ -450,192 +473,184 @@ export default function ChartAnalysis() {
 
       let yPos = margin;
 
-      // Header with date
-      doc.setFillColor(16, 185, 129);
-      doc.rect(margin, yPos, contentWidth, 12, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.text(`Chart Analysis - ${log.log_date}`, margin + 4, yPos + 8);
-      yPos += 16;
-
-      // Support/Resistance section
+      // ========== HEADER SECTION ==========
+      // Title: "บันทึกการเดินทางของกราฟ"
+      doc.setFont("Sarabun", "bold");
+      doc.setFontSize(titleFontSize);
       doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPos, contentWidth, 14, "F");
-      doc.text(`Resistance: ${log.main_resistance || "-"}`, margin + 4, yPos + 5);
-      doc.text(`S/R: ${log.minor_sr || "-"}`, margin + contentWidth / 3, yPos + 5);
-      doc.text(`Support: ${log.main_support || "-"}`, margin + (contentWidth * 2) / 3, yPos + 5);
-      yPos += 18;
+      doc.text("บันทึกการเดินทางของกราฟ", pageWidth / 2, yPos, { align: "center" });
+      yPos += lineHeight + 2;
 
-      // Timeframes section
+      // Date
+      doc.setFont("Sarabun", "normal");
+      doc.setFontSize(baseFontSize);
+      doc.text(`วันที่ ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += lineHeight + 6;
+
+      // ========== TF CHECK TABLE ==========
+      // Section header
+      doc.setFont("Sarabun", "bold");
+      doc.setFontSize(headerFontSize);
+      doc.text("เช็ค Sig / วงจรกราฟของทุก TF (07.00น.)", margin, yPos);
+      yPos += lineHeight + 3;
+
+      // TF data array
       const timeframes = [
-        { name: "MN (Monthly)", signal: log.mn_signal, structure: log.mn_market_structure, imageUrl: log.mn_image_url },
-        { name: "W (Weekly)", signal: log.w_signal, structure: log.w_market_structure, imageUrl: log.w_image_url },
-        { name: "D (Daily)", signal: log.d_signal, structure: log.d_market_structure, imageUrl: log.d_image_url },
-        { name: "H4 (4 Hour)", signal: log.h4_signal, structure: log.h4_market_structure, imageUrl: log.h4_image_url },
-        { name: "H1 (1 Hour)", signal: log.h1_signal, structure: log.h1_market_structure, imageUrl: log.h1_image_url },
+        { name: "MN", signal: log.mn_signal || "", structure: log.mn_market_structure || "" },
+        { name: "Week", signal: log.w_signal || "", structure: log.w_market_structure || "" },
+        { name: "Day", signal: log.d_signal || "", structure: log.d_market_structure || "" },
+        { name: "H4", signal: log.h4_signal || "", structure: log.h4_market_structure || "" },
+        { name: "H1", signal: log.h1_signal || "", structure: log.h1_market_structure || "" },
       ];
 
-      // Timeframe header
-      doc.setFillColor(59, 130, 246);
-      doc.rect(margin, yPos, contentWidth, 8, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.text("Timeframe Analysis", margin + 4, yPos + 5.5);
-      yPos += 10;
+      doc.setFont("Sarabun", "normal");
+      doc.setFontSize(baseFontSize);
 
-      // Load all timeframe images
-      const tfImages = await Promise.all(timeframes.map(tf => loadImageAsBase64(tf.imageUrl || "")));
-
-      // Display timeframes in rows (3 per row)
-      for (let i = 0; i < timeframes.length; i += 3) {
-        const rowTfs = timeframes.slice(i, i + 3);
-        const rowImages = tfImages.slice(i, i + 3);
-
-        // Check if we need a new page
-        if (yPos + imageHeight + 20 > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-        }
-
-        // Draw timeframe boxes
-        for (let j = 0; j < rowTfs.length; j++) {
-          const tf = rowTfs[j];
-          const xPos = margin + j * (imageWidth + 4);
-
-          // TF header
-          doc.setFillColor(240, 240, 240);
-          doc.rect(xPos, yPos, imageWidth, 6, "F");
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(8);
-          doc.text(tf.name, xPos + 2, yPos + 4);
-
-          // Signal badge
-          const signalColor = tf.signal === "Buy" ? [16, 185, 129] : tf.signal === "Sell" ? [239, 68, 68] : [156, 163, 175];
-          doc.setFillColor(signalColor[0], signalColor[1], signalColor[2]);
-          doc.roundedRect(xPos + imageWidth - 18, yPos + 1, 16, 4, 1, 1, "F");
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(6);
-          doc.text(tf.signal || "-", xPos + imageWidth - 16, yPos + 3.8);
-
-          // Structure text
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(6);
-          doc.text(`Structure: ${tf.structure || "-"}`, xPos + 2, yPos + 10);
-
-          // Image
-          if (rowImages[j]) {
-            try {
-              doc.addImage(rowImages[j]!, "JPEG", xPos, yPos + 12, imageWidth, imageHeight - 12);
-            } catch {
-              doc.setFillColor(200, 200, 200);
-              doc.rect(xPos, yPos + 12, imageWidth, imageHeight - 12, "F");
-              doc.setTextColor(100, 100, 100);
-              doc.text("No image", xPos + imageWidth / 2 - 8, yPos + imageHeight / 2 + 6);
-            }
-          } else {
-            doc.setFillColor(200, 200, 200);
-            doc.rect(xPos, yPos + 12, imageWidth, imageHeight - 12, "F");
-            doc.setTextColor(100, 100, 100);
-            doc.text("No image", xPos + imageWidth / 2 - 8, yPos + imageHeight / 2 + 6);
-          }
-        }
-        yPos += imageHeight + 6;
+      for (const tf of timeframes) {
+        const signalText = tf.signal || "___";
+        const structureText = tf.structure || "___";
+        const tfLine = `${tf.name.padEnd(6)} Sig ${signalText} ไล้หลัง Sig ${structureText}`;
+        doc.text(tfLine, margin + 5, yPos);
+        
+        // Draw dotted line to fill the rest
+        const textWidth = doc.getTextWidth(tfLine);
+        drawDottedLine(yPos, margin + 5 + textWidth + 5);
+        yPos += lineHeight + 2;
       }
 
-      // Sessions section
+      yPos += 4;
+
+      // ========== SUPPORT/RESISTANCE SECTION ==========
+      doc.setFont("Sarabun", "bold");
+      doc.setFontSize(headerFontSize);
+      doc.text("กรอบวัน :", margin, yPos);
+      yPos += lineHeight + 3;
+
+      doc.setFont("Sarabun", "normal");
+      doc.setFontSize(baseFontSize);
+
+      // Main Resistance
+      const resistanceText = log.main_resistance || "________________";
+      doc.text(`ต้านหลัก: ${resistanceText}`, margin + 20, yPos);
+      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`ต้านหลัก: ${resistanceText}`) + 5);
+      yPos += lineHeight + 2;
+
+      // Minor S/R
+      const minorSrText = log.minor_sr || "________________";
+      doc.text(`รับ-ต้าน ย่อย: ${minorSrText}`, margin + 20, yPos);
+      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`รับ-ต้าน ย่อย: ${minorSrText}`) + 5);
+      yPos += lineHeight + 2;
+
+      // Main Support
+      const supportText = log.main_support || "________________";
+      doc.text(`รับหลัก: ${supportText}`, margin + 20, yPos);
+      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`รับหลัก: ${supportText}`) + 5);
+      yPos += lineHeight + 8;
+
+      // ========== SESSIONS SECTION ==========
       const sessions = log.chart_analysis_sessions || [];
-      if (sessions.length > 0) {
-        // Check if we need a new page
-        if (yPos + 20 > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-        }
+      const sessionTimes = ["07:00", "11:00", "15:00", "19:00"];
+
+      for (const sessionTime of sessionTimes) {
+        yPos = checkPageBreak(yPos, 40);
+
+        const session = sessions.find((s: { session_time: string }) => s.session_time === sessionTime);
 
         // Session header
-        doc.setFillColor(139, 92, 246);
-        doc.rect(margin, yPos, contentWidth, 8, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text("Session Analysis", margin + 4, yPos + 5.5);
-        yPos += 10;
+        doc.setFont("Sarabun", "bold");
+        doc.setFontSize(headerFontSize);
+        doc.text(`${sessionTime.replace(":", ".")} น. H1 / H4`, margin, yPos);
+        
+        // "ราคากราฟ:" label
+        doc.setFont("Sarabun", "normal");
+        doc.setFontSize(baseFontSize);
+        doc.text("ราคากราฟ:", margin + 50, yPos);
+        yPos += lineHeight + 3;
 
-        for (const session of sessions) {
-          // Check if we need a new page
-          if (yPos + 60 > pageHeight - margin) {
-            doc.addPage();
-            yPos = margin;
+        // Notes lines (H4 Analysis, H1 Analysis, Chart Notes)
+        const noteLines = [
+          session?.h4_analysis || "",
+          session?.h1_analysis || "",
+          session?.chart_notes || "",
+        ];
+
+        for (let i = 0; i < 5; i++) {
+          const noteText = noteLines[i] || "";
+          if (noteText) {
+            doc.setFont("Sarabun", "normal");
+            doc.setFontSize(smallFontSize);
+            doc.text(noteText.substring(0, 80), margin + 5, yPos);
           }
+          drawDottedLine(yPos);
+          yPos += lineHeight + 1;
+        }
 
-          // Session time header
-          doc.setFillColor(240, 240, 240);
-          doc.rect(margin, yPos, contentWidth, 6, "F");
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(9);
-          doc.text(`Session ${session.session_time}`, margin + 4, yPos + 4);
-          yPos += 8;
+        yPos += 6;
+      }
 
-          // Load session images
-          const [h4Img, h1Img] = await Promise.all([
-            loadImageAsBase64(session.h4_image_url || ""),
-            loadImageAsBase64(session.h1_image_url || ""),
-          ]);
+      // ========== IMAGES PAGE ==========
+      // Add images on a separate page for each log
+      const timeframeImages = [
+        { name: "MN", url: log.mn_image_url },
+        { name: "W", url: log.w_image_url },
+        { name: "D", url: log.d_image_url },
+        { name: "H4", url: log.h4_image_url },
+        { name: "H1", url: log.h1_image_url },
+      ].filter(tf => tf.url);
 
-          const halfWidth = (contentWidth - 4) / 2;
-          const sessionImgHeight = 35;
+      const sessionImages = sessions.flatMap((s: { session_time: string; h4_image_url?: string; h1_image_url?: string }) => [
+        s.h4_image_url ? { name: `${s.session_time} H4`, url: s.h4_image_url } : null,
+        s.h1_image_url ? { name: `${s.session_time} H1`, url: s.h1_image_url } : null,
+      ]).filter(Boolean);
 
-          // H4 section
-          doc.setFillColor(245, 245, 245);
-          doc.rect(margin, yPos, halfWidth, sessionImgHeight + 12, "F");
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(8);
-          doc.text("H4", margin + 2, yPos + 4);
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(6);
-          const h4AnalysisText = session.h4_analysis || "-";
-          doc.text(h4AnalysisText.substring(0, 40), margin + 10, yPos + 4);
-          
-          if (h4Img) {
-            try {
-              doc.addImage(h4Img, "JPEG", margin + 2, yPos + 6, halfWidth - 4, sessionImgHeight);
-            } catch {}
+      const allImages = [...timeframeImages, ...sessionImages];
+
+      if (allImages.length > 0) {
+        doc.addPage();
+        yPos = margin;
+
+        doc.setFont("Sarabun", "bold");
+        doc.setFontSize(titleFontSize);
+        doc.text(`รูปภาพประกอบ - ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
+        yPos += lineHeight + 8;
+
+        const imgWidth = (contentWidth - 10) / 2;
+        const imgHeight = 50;
+
+        for (let i = 0; i < allImages.length; i += 2) {
+          yPos = checkPageBreak(yPos, imgHeight + 15);
+
+          for (let j = 0; j < 2 && i + j < allImages.length; j++) {
+            const img = allImages[i + j];
+            const xPos = margin + j * (imgWidth + 10);
+
+            // Image label
+            doc.setFont("Sarabun", "bold");
+            doc.setFontSize(smallFontSize);
+            doc.text(img!.name, xPos, yPos);
+
+            // Load and add image
+            const imgData = await loadImageAsBase64(img!.url || "");
+            if (imgData) {
+              try {
+                doc.addImage(imgData, "JPEG", xPos, yPos + 3, imgWidth, imgHeight);
+              } catch {
+                doc.setFillColor(220, 220, 220);
+                doc.rect(xPos, yPos + 3, imgWidth, imgHeight, "F");
+                doc.setFont("Sarabun", "normal");
+                doc.setFontSize(smallFontSize);
+                doc.text("ไม่สามารถโหลดรูปได้", xPos + imgWidth / 2, yPos + imgHeight / 2 + 3, { align: "center" });
+              }
+            }
           }
-
-          // H1 section
-          const h1X = margin + halfWidth + 4;
-          doc.setFillColor(245, 245, 245);
-          doc.rect(h1X, yPos, halfWidth, sessionImgHeight + 12, "F");
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(8);
-          doc.text("H1", h1X + 2, yPos + 4);
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(6);
-          const h1AnalysisText = session.h1_analysis || "-";
-          doc.text(h1AnalysisText.substring(0, 40), h1X + 10, yPos + 4);
-          
-          if (h1Img) {
-            try {
-              doc.addImage(h1Img, "JPEG", h1X + 2, yPos + 6, halfWidth - 4, sessionImgHeight);
-            } catch {}
-          }
-
-          yPos += sessionImgHeight + 14;
-
-          // Chart notes
-          if (session.chart_notes) {
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(7);
-            doc.text(`Notes: ${session.chart_notes.substring(0, 100)}`, margin + 2, yPos);
-            yPos += 6;
-          }
+          yPos += imgHeight + 15;
         }
       }
     }
 
     doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
     setExportDialogOpen(false);
-    toast({ title: "ส่งออก PDF สำเร็จ", description: "รวมรูปภาพทุก TF และ Sessions" });
+    toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
   };
 
   // Update timeframe data
@@ -954,6 +969,24 @@ export default function ChartAnalysis() {
                   </div>
                 </div>
                 
+                <div className="space-y-2">
+                  <Label>ขนาดตัวอักษร PDF</Label>
+                  <Select 
+                    value={String(pdfFontSize)} 
+                    onValueChange={(v) => setPdfFontSize(Number(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">12pt (เล็ก)</SelectItem>
+                      <SelectItem value="14">14pt (ปกติ)</SelectItem>
+                      <SelectItem value="16">16pt (ใหญ่)</SelectItem>
+                      <SelectItem value="18">18pt (ใหญ่มาก)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <div className="flex flex-col gap-2">
                   <Button onClick={exportToCSV} className="gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
@@ -961,7 +994,7 @@ export default function ChartAnalysis() {
                   </Button>
                   <Button onClick={exportToPDF} variant="outline" className="gap-2">
                     <File className="h-4 w-4" />
-                    ส่งออก PDF
+                    ส่งออก PDF (แบบสมุด)
                   </Button>
                 </div>
               </div>

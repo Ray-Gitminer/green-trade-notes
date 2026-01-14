@@ -576,6 +576,31 @@ export default function ChartAnalysis() {
               fileInputRef.current?.click();
             }
           }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add("border-primary", "bg-primary/5");
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+          }}
+          onDrop={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+            const file = e.dataTransfer.files?.[0];
+            if (file && file.type.startsWith("image/")) {
+              try {
+                const url = await uploadImage(file, "charts");
+                updateTimeframe(tf, "imageUrl", url);
+                toast({ title: "อัพโหลดรูปสำเร็จ" });
+              } catch {
+                toast({ title: "อัพโหลดล้มเหลว", variant: "destructive" });
+              }
+            }
+          }}
         >
           {currentLog[tf].imageUrl ? (
             <div className="relative w-full">
@@ -600,8 +625,7 @@ export default function ChartAnalysis() {
           ) : (
             <>
               <Image className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-xs text-muted-foreground">1) คลิกกล่องนี้</p>
-              <p className="text-xs text-muted-foreground">2) กด Ctrl+V เพื่อวางรูป (TradingView)</p>
+              <p className="text-xs text-muted-foreground">ลากรูปมาวาง หรือคลิกแล้ว Ctrl+V</p>
               <Button
                 type="button"
                 variant="outline"
@@ -667,6 +691,31 @@ export default function ChartAnalysis() {
                       h1InputRef.current?.click();
                     }
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.add("border-primary", "bg-primary/5");
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/")) {
+                      try {
+                        const url = await uploadImage(file, "charts");
+                        updateSession(index, "h1ImageUrl", url);
+                        toast({ title: "อัพโหลดรูปสำเร็จ" });
+                      } catch {
+                        toast({ title: "อัพโหลดล้มเหลว", variant: "destructive" });
+                      }
+                    }
+                  }}
                 >
                   {session.h1ImageUrl ? (
                     <div className="relative w-full">
@@ -687,7 +736,7 @@ export default function ChartAnalysis() {
                     <div className="text-xs text-muted-foreground space-y-2">
                       <div>
                         <Upload className="h-5 w-5 mx-auto mb-1" />
-                        <div>คลิกกล่องนี้ แล้วกด Ctrl+V เพื่อวางรูป</div>
+                        <div>ลากรูปวาง หรือคลิกแล้ว Ctrl+V</div>
                       </div>
                       <Button
                         type="button"
@@ -729,6 +778,31 @@ export default function ChartAnalysis() {
                       h4InputRef.current?.click();
                     }
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.add("border-primary", "bg-primary/5");
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove("border-primary", "bg-primary/5");
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/")) {
+                      try {
+                        const url = await uploadImage(file, "charts");
+                        updateSession(index, "h4ImageUrl", url);
+                        toast({ title: "อัพโหลดรูปสำเร็จ" });
+                      } catch {
+                        toast({ title: "อัพโหลดล้มเหลว", variant: "destructive" });
+                      }
+                    }
+                  }}
                 >
                   {session.h4ImageUrl ? (
                     <div className="relative w-full">
@@ -749,7 +823,7 @@ export default function ChartAnalysis() {
                     <div className="text-xs text-muted-foreground space-y-2">
                       <div>
                         <Upload className="h-5 w-5 mx-auto mb-1" />
-                        <div>คลิกกล่องนี้ แล้วกด Ctrl+V เพื่อวางรูป</div>
+                        <div>ลากรูปวาง หรือคลิกแล้ว Ctrl+V</div>
                       </div>
                       <Button
                         type="button"

@@ -2,12 +2,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Send, Loader2, Bot, User, ImagePlus, Trash2 } from "lucide-react";
+import { X, Send, Loader2, Bot, User, ImagePlus, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+import SaveToTradeDialog from "./SaveToTradeDialog";
 
 interface MessageContent {
   type: "text" | "image_url";
@@ -33,6 +34,8 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [selectedAnalysis, setSelectedAnalysis] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +135,11 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
 
   const removeImage = (index: number) => {
     setPendingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveToTrade = (analysisText: string) => {
+    setSelectedAnalysis(analysisText);
+    setSaveDialogOpen(true);
   };
 
   const streamChat = async (userMessage: Message) => {
@@ -359,6 +367,19 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
                     </div>
                   )}
                   <p className="whitespace-pre-wrap">{text}</p>
+                  
+                  {/* Save to Trade button for assistant messages */}
+                  {msg.role === "assistant" && text.length > 50 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSaveToTrade(text)}
+                      className="mt-2 h-7 text-xs text-muted-foreground hover:text-primary gap-1"
+                    >
+                      <Save className="h-3 w-3" />
+                      {language === "th" ? "บันทึกลงเทรด" : "Save to Trade"}
+                    </Button>
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
@@ -445,6 +466,13 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
           </Button>
         </div>
       </div>
+
+      {/* Save to Trade Dialog */}
+      <SaveToTradeDialog
+        open={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        analysisText={selectedAnalysis}
+      />
     </div>
   );
 }

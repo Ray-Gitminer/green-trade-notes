@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,10 +22,14 @@ export default function NewTrade() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isPaperTrade, setIsPaperTrade] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  
+  // Check for Ryuta analysis passed from chat
+  const ryutaAnalysis = (location.state as { ryutaAnalysis?: string })?.ryutaAnalysis || "";
   
   const [formData, setFormData] = useState({
     pair: "",
@@ -38,7 +42,7 @@ export default function NewTrade() {
     emotionalState: "neutral",
     confidenceLevel: [7],
     preTradeNotes: "",
-    analysis: "",
+    analysis: ryutaAnalysis ? `--- Ryuta Analysis ---\n${ryutaAnalysis}` : "",
     mnSignal: "", mnNotes: "",
     wSignal: "", wNotes: "",
     dSignal: "", dNotes: "",

@@ -1,16 +1,23 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Send, Loader2, Bot, User } from "lucide-react";
+import { X, Send, Loader2, Bot, User, ImagePlus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+
+interface MessageContent {
+  type: "text" | "image_url";
+  text?: string;
+  image_url?: { url: string };
+}
 
 interface Message {
   role: "user" | "assistant";
-  content: string;
+  content: string | MessageContent[];
 }
 
 interface RyutaChatProps {
@@ -20,12 +27,15 @@ interface RyutaChatProps {
 
 export default function RyutaChat({ open, onClose }: RyutaChatProps) {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && inputRef.current) {
@@ -70,7 +80,61 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
     });
   };
 
-  const streamChat = async (userMessage: string) => {
+  // Handle paste event for images
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await processImageFile(file);
+        }
+      }
+    }
+  }, []);
+
+  const processImageFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: language === "th" ? "รูปใหญ่เกินไป" : "Image too large",
+        description: language === "th" ? "กรุณาใช้รูปขนาดไม่เกิน 5MB" : "Please use images under 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setPendingImages(prev => [...prev, base64]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    Array.from(files).forEach(file => {
+      if (file.type.startsWith("image/")) {
+        processImageFile(file);
+      }
+    });
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setPendingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const streamChat = async (userMessage: Message) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ryuta-chat`;
     
     const resp = await fetch(CHAT_URL, {
@@ -80,18 +144,18 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ 
-        messages: [...messages, { role: "user", content: userMessage }]
+        messages: [...messages, userMessage]
       }),
     });
 
     if (!resp.ok) {
       if (resp.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
+        throw new Error(language === "th" ? "ใช้งานเกินลิมิต กรุณารอสักครู่" : "Rate limit exceeded. Please try again later.");
       }
       if (resp.status === 402) {
-        throw new Error("Usage limit reached. Please add credits.");
+        throw new Error(language === "th" ? "เครดิตหมด กรุณาเติมเครดิต" : "Usage limit reached. Please add credits.");
       }
-      throw new Error("Failed to connect to Ryuta");
+      throw new Error(language === "th" ? "ไม่สามารถเชื่อมต่อ Ryuta ได้" : "Failed to connect to Ryuta");
     }
 
     if (!resp.body) throw new Error("No response body");
@@ -145,26 +209,72 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && pendingImages.length === 0) || isLoading) return;
 
-    const userMessage = input.trim();
+    // Build message content
+    let userMessage: Message;
+    const textContent = input.trim();
+    
+    if (pendingImages.length > 0) {
+      // Multimodal message with images
+      const content: MessageContent[] = [];
+      
+      // Add images first
+      pendingImages.forEach(img => {
+        content.push({
+          type: "image_url",
+          image_url: { url: img }
+        });
+      });
+      
+      // Add text
+      content.push({
+        type: "text",
+        text: textContent || (language === "th" ? "วิเคราะห์ชาร์ตนี้ให้หน่อยครับ" : "Please analyze this chart")
+      });
+      
+      userMessage = { role: "user", content };
+    } else {
+      userMessage = { role: "user", content: textContent };
+    }
+
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setPendingImages([]);
+    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      await saveMessage("user", userMessage);
+      // Save text version for history
+      const textForHistory = typeof userMessage.content === "string" 
+        ? userMessage.content 
+        : (language === "th" ? "[รูปภาพ] " : "[Image] ") + (userMessage.content.find(c => c.type === "text")?.text || "");
+      
+      await saveMessage("user", textForHistory);
       const assistantResponse = await streamChat(userMessage);
       await saveMessage("assistant", assistantResponse);
     } catch (error) {
       toast({
-        title: "Chat Error",
+        title: language === "th" ? "เกิดข้อผิดพลาด" : "Chat Error",
         description: error instanceof Error ? error.message : "Failed to get response",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getMessageText = (content: string | MessageContent[]): string => {
+    if (typeof content === "string") return content;
+    const textPart = content.find(c => c.type === "text");
+    return textPart?.text || "";
+  };
+
+  const getMessageImages = (content: string | MessageContent[]): string[] => {
+    if (typeof content === "string") return [];
+    return content
+      .filter(c => c.type === "image_url")
+      .map(c => c.image_url?.url || "")
+      .filter(Boolean);
   };
 
   if (!open) return null;
@@ -179,7 +289,9 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Ryuta Assistant</h3>
-            <p className="text-xs text-muted-foreground">Your trading mentor</p>
+            <p className="text-xs text-muted-foreground">
+              {language === "th" ? "วิเคราะห์ชาร์ต & ที่ปรึกษาเทรด" : "Chart Analyst & Trading Mentor"}
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -192,70 +304,137 @@ export default function RyutaChat({ open, onClose }: RyutaChatProps) {
         {messages.length === 0 && (
           <div className="text-center py-8">
             <Bot className="h-12 w-12 text-primary/50 mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">
-              Hi! I'm Ryuta, your trading mentor. Ask me about trade ideas, psychology, or strategies.
+            <p className="text-muted-foreground text-sm mb-4">
+              {language === "th" 
+                ? "สวัสดีครับพี่เรย์! ริวตะพร้อมวิเคราะห์ชาร์ตและให้คำปรึกษาเทรดครับ" 
+                : "Hi P'Ray! I'm Ryuta, ready to analyze charts and help with trading."}
             </p>
+            <div className="bg-muted/50 rounded-lg p-3 text-left text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">
+                {language === "th" ? "💡 วิธีใช้:" : "💡 How to use:"}
+              </p>
+              <p>• {language === "th" ? "Ctrl+V วางรูปชาร์ตจาก TradingView" : "Ctrl+V to paste chart from TradingView"}</p>
+              <p>• {language === "th" ? "คลิก 📷 เพื่ออัปโหลดรูป" : "Click 📷 to upload image"}</p>
+              <p>• {language === "th" ? "ถามเกี่ยวกับ PA, ICT, แนวรับ-ต้าน" : "Ask about PA, ICT, S/R levels"}</p>
+            </div>
           </div>
         )}
         <div className="space-y-4">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex gap-3",
-                msg.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-              )}
+          {messages.map((msg, i) => {
+            const images = getMessageImages(msg.content);
+            const text = getMessageText(msg.content);
+            
+            return (
               <div
+                key={i}
                 className={cn(
-                  "max-w-[80%] rounded-lg px-4 py-2 text-sm",
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
+                  "flex gap-3",
+                  msg.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-              </div>
-              {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-secondary-foreground" />
+                {msg.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-lg px-4 py-2 text-sm",
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  )}
+                >
+                  {/* Show images if any */}
+                  {images.length > 0 && (
+                    <div className="mb-2 grid gap-2">
+                      {images.map((img, imgIdx) => (
+                        <img 
+                          key={imgIdx} 
+                          src={img} 
+                          alt="Chart" 
+                          className="rounded max-h-48 object-contain"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="whitespace-pre-wrap">{text}</p>
                 </div>
-              )}
-            </div>
-          ))}
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-secondary-foreground" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
           {isLoading && messages[messages.length - 1]?.role === "user" && (
             <div className="flex gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                 <Loader2 className="h-4 w-4 text-primary animate-spin" />
               </div>
               <div className="bg-muted rounded-lg px-4 py-2">
-                <span className="text-muted-foreground text-sm">Thinking...</span>
+                <span className="text-muted-foreground text-sm">
+                  {language === "th" ? "กำลังวิเคราะห์..." : "Analyzing..."}
+                </span>
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
+      {/* Pending Images Preview */}
+      {pendingImages.length > 0 && (
+        <div className="px-4 py-2 border-t border-border bg-muted/30">
+          <div className="flex gap-2 overflow-x-auto">
+            {pendingImages.map((img, idx) => (
+              <div key={idx} className="relative flex-shrink-0">
+                <img src={img} alt="Pending" className="h-16 w-16 object-cover rounded" />
+                <button
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
         <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="flex-shrink-0"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </Button>
           <Input
             ref={inputRef}
-            placeholder="Ask Ryuta anything..."
+            placeholder={language === "th" ? "พิมพ์หรือวางรูปชาร์ต..." : "Type or paste chart image..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            onPaste={handlePaste}
             className="bg-input border-border"
             disabled={isLoading}
           />
           <Button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            disabled={((!input.trim() && pendingImages.length === 0) || isLoading)}
             className="bg-primary hover:bg-primary/90"
           >
             {isLoading ? (

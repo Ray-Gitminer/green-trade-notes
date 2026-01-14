@@ -91,12 +91,14 @@ export default function ChartAnalysis() {
     setLoading(true);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
-      const { data: logData } = await supabase
+      const { data: logData, error: logError } = await supabase
         .from("chart_analysis_logs")
         .select("*")
         .eq("user_id", user.id)
         .eq("log_date", dateStr)
-        .single();
+        .maybeSingle();
+
+      if (logError) throw logError;
 
       if (logData) {
         const { data: sessionsData } = await supabase
@@ -159,52 +161,80 @@ export default function ChartAnalysis() {
   // Upload image
   const uploadImage = async (file: File, folder: string): Promise<string> => {
     if (!user) throw new Error("Not authenticated");
-    const ext = file.name.split(".").pop();
+
+    const mimeExt = file.type?.split("/")?.[1] || "png";
+    const nameExt = file.name?.includes(".") ? file.name.split(".").pop() : undefined;
+    const ext = (nameExt || mimeExt || "png").toLowerCase();
+
     const fileName = `${user.id}/${folder}/${Date.now()}.${ext}`;
-    
+
     const { error } = await supabase.storage
       .from("chart-images")
-      .upload(fileName, file);
-    
+      .upload(fileName, file, { upsert: true });
+
     if (error) throw error;
-    
+
     const { data } = supabase.storage.from("chart-images").getPublicUrl(fileName);
     return data.publicUrl;
   };
 
-  // Handle paste for image
-  const handlePaste = async (e: React.ClipboardEvent, updateFn: (url: string) => void) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          try {
-            const url = await uploadImage(file, "charts");
-            updateFn(url);
-            toast({ title: "อัพโหลดรูปสำเร็จ" });
-          } catch (error) {
-            toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัพโหลดรูปได้", variant: "destructive" });
-          }
-        }
+  // Global paste target (because paste events on <div> are unreliable across browsers)
+  const pasteTargetRef = useRef<null | { folder: string; updateFn: (url: string) => void }>(null);
+
+  const setPasteTarget = useCallback((folder: string, updateFn: (url: string) => void) => {
+    pasteTargetRef.current = { folder, updateFn };
+  }, []);
+
+  useEffect(() => {
+    const onWindowPaste = async (e: ClipboardEvent) => {
+      const target = pasteTargetRef.current;
+      if (!target) return;
+
+      const items = e.clipboardData?.items;
+      if (!items?.length) return;
+
+      const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
+      if (!imageItem) {
+        toast({
+          title: "ไม่พบรูปในคลิปบอร์ด",
+          description: "ให้คัดลอกรูปจาก TradingView ก่อน แล้วค่อยวาง (Ctrl+V)",
+          variant: "destructive",
+        });
+        return;
       }
-    }
-  };
+
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (!file) return;
+
+      try {
+        const url = await uploadImage(file, target.folder);
+        target.updateFn(url);
+        toast({ title: "วาง/อัพโหลดรูปสำเร็จ" });
+      } catch (error) {
+        console.error("Paste upload error:", error);
+        toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัพโหลดรูปได้", variant: "destructive" });
+      }
+    };
+
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  }, [toast, user]);
 
   // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, updateFn: (url: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     try {
       const url = await uploadImage(file, "charts");
       updateFn(url);
       toast({ title: "อัพโหลดรูปสำเร็จ" });
     } catch (error) {
       toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัพโหลดรูปได้", variant: "destructive" });
+    } finally {
+      // allow re-select same file
+      e.target.value = "";
     }
   };
 
@@ -427,40 +457,41 @@ export default function ChartAnalysis() {
             </SelectContent>
           </Select>
           
-          <Input 
-            placeholder="ไล้หลัง Sig (เช่น 1,2,3,4)"
+          <Textarea
+            placeholder="ไล้หลัง Sig (พิมพ์ได้หลายตัว เช่น 1,2,3,4,5)"
             value={currentLog[tf].marketStructure}
             onChange={(e) => updateTimeframe(tf, "marketStructure", e.target.value)}
-            className="h-9"
+            className="h-9 min-h-0 resize-none"
+            rows={1}
             maxLength={100}
           />
         </div>
 
-        <div 
+        <div
           ref={dropZoneRef}
           tabIndex={0}
-          className="border-2 border-dashed border-border/50 rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[100px] flex flex-col items-center justify-center"
-          onPaste={(e) => handlePaste(e, (url) => updateTimeframe(tf, "imageUrl", url))}
+          className="border-2 border-dashed border-border/50 rounded-lg p-3 text-center hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[100px] flex flex-col items-center justify-center"
           onClick={() => {
+            setPasteTarget("charts", (url) => updateTimeframe(tf, "imageUrl", url));
             dropZoneRef.current?.focus();
-            fileInputRef.current?.click();
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               fileInputRef.current?.click();
             }
           }}
         >
           {currentLog[tf].imageUrl ? (
             <div className="relative w-full">
-              <img 
-                src={currentLog[tf].imageUrl} 
-                alt={label} 
+              <img
+                src={currentLog[tf].imageUrl}
+                alt={label}
                 className="max-h-32 mx-auto rounded object-contain"
+                loading="lazy"
               />
-              <Button 
-                size="icon" 
-                variant="destructive" 
+              <Button
+                size="icon"
+                variant="destructive"
                 className="absolute top-0 right-0 h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -473,15 +504,28 @@ export default function ChartAnalysis() {
           ) : (
             <>
               <Image className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-xs text-muted-foreground">คลิกที่นี่แล้ววาง (Ctrl+V)</p>
-              <p className="text-xs text-muted-foreground">หรือคลิกเพื่ออัพโหลด</p>
+              <p className="text-xs text-muted-foreground">1) คลิกกล่องนี้</p>
+              <p className="text-xs text-muted-foreground">2) กด Ctrl+V เพื่อวางรูป (TradingView)</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 gap-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                อัพโหลดรูป
+              </Button>
             </>
           )}
         </div>
-        <input 
+        <input
           ref={fileInputRef}
-          type="file" 
-          accept="image/*" 
+          type="file"
+          accept="image/*"
           className="hidden"
           onChange={(e) => handleFileUpload(e, (url) => updateTimeframe(tf, "imageUrl", url))}
         />
@@ -512,85 +556,129 @@ export default function ChartAnalysis() {
           />
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">H1 Chart</Label>
-              <div 
-                ref={h1DropZoneRef}
-                tabIndex={0}
-                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
-                onPaste={(e) => handlePaste(e, (url) => updateSession(index, "h1ImageUrl", url))}
-                onClick={() => {
-                  h1DropZoneRef.current?.focus();
-                  h1InputRef.current?.click();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    h1InputRef.current?.click();
-                  }
-                }}
-              >
-                {session.h1ImageUrl ? (
-                  <div className="relative w-full">
-                    <img src={session.h1ImageUrl} alt="H1" className="max-h-20 mx-auto rounded object-contain" />
-                    <Button 
-                      size="icon" 
-                      variant="destructive" 
-                      className="absolute top-0 right-0 h-5 w-5"
-                      onClick={(e) => { e.stopPropagation(); updateSession(index, "h1ImageUrl", ""); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    <Upload className="h-5 w-5 mx-auto mb-1" />
-                    คลิกแล้ววาง/อัพโหลด
-                  </div>
-                )}
+              <div className="space-y-2">
+                <Label className="text-sm">H1 Chart</Label>
+                <div
+                  ref={h1DropZoneRef}
+                  tabIndex={0}
+                  className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
+                  onClick={() => {
+                    setPasteTarget("charts", (url) => updateSession(index, "h1ImageUrl", url));
+                    h1DropZoneRef.current?.focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      h1InputRef.current?.click();
+                    }
+                  }}
+                >
+                  {session.h1ImageUrl ? (
+                    <div className="relative w-full">
+                      <img src={session.h1ImageUrl} alt="H1" className="max-h-20 mx-auto rounded object-contain" loading="lazy" />
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="absolute top-0 right-0 h-5 w-5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateSession(index, "h1ImageUrl", "");
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground space-y-2">
+                      <div>
+                        <Upload className="h-5 w-5 mx-auto mb-1" />
+                        <div>คลิกกล่องนี้ แล้วกด Ctrl+V เพื่อวางรูป</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          h1InputRef.current?.click();
+                        }}
+                      >
+                        <Upload className="h-4 w-4" />
+                        อัพโหลด
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={h1InputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, (url) => updateSession(index, "h1ImageUrl", url))}
+                />
               </div>
-              <input ref={h1InputRef} type="file" accept="image/*" className="hidden" 
-                onChange={(e) => handleFileUpload(e, (url) => updateSession(index, "h1ImageUrl", url))} />
-            </div>
             
-            <div className="space-y-2">
-              <Label className="text-sm">H4 Chart</Label>
-              <div 
-                ref={h4DropZoneRef}
-                tabIndex={0}
-                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
-                onPaste={(e) => handlePaste(e, (url) => updateSession(index, "h4ImageUrl", url))}
-                onClick={() => {
-                  h4DropZoneRef.current?.focus();
-                  h4InputRef.current?.click();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    h4InputRef.current?.click();
-                  }
-                }}
-              >
-                {session.h4ImageUrl ? (
-                  <div className="relative w-full">
-                    <img src={session.h4ImageUrl} alt="H4" className="max-h-20 mx-auto rounded object-contain" />
-                    <Button 
-                      size="icon" 
-                      variant="destructive" 
-                      className="absolute top-0 right-0 h-5 w-5"
-                      onClick={(e) => { e.stopPropagation(); updateSession(index, "h4ImageUrl", ""); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    <Upload className="h-5 w-5 mx-auto mb-1" />
-                    คลิกแล้ววาง/อัพโหลด
-                  </div>
-                )}
+              <div className="space-y-2">
+                <Label className="text-sm">H4 Chart</Label>
+                <div
+                  ref={h4DropZoneRef}
+                  tabIndex={0}
+                  className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
+                  onClick={() => {
+                    setPasteTarget("charts", (url) => updateSession(index, "h4ImageUrl", url));
+                    h4DropZoneRef.current?.focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      h4InputRef.current?.click();
+                    }
+                  }}
+                >
+                  {session.h4ImageUrl ? (
+                    <div className="relative w-full">
+                      <img src={session.h4ImageUrl} alt="H4" className="max-h-20 mx-auto rounded object-contain" loading="lazy" />
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="absolute top-0 right-0 h-5 w-5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateSession(index, "h4ImageUrl", "");
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground space-y-2">
+                      <div>
+                        <Upload className="h-5 w-5 mx-auto mb-1" />
+                        <div>คลิกกล่องนี้ แล้วกด Ctrl+V เพื่อวางรูป</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          h4InputRef.current?.click();
+                        }}
+                      >
+                        <Upload className="h-4 w-4" />
+                        อัพโหลด
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={h4InputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e, (url) => updateSession(index, "h4ImageUrl", url))}
+                />
               </div>
-              <input ref={h4InputRef} type="file" accept="image/*" className="hidden" 
-                onChange={(e) => handleFileUpload(e, (url) => updateSession(index, "h4ImageUrl", url))} />
-            </div>
           </div>
         </CardContent>
       </Card>

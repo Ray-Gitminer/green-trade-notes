@@ -14,6 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
+      chart_analysis_logs: {
+        Row: {
+          created_at: string
+          d_image_url: string | null
+          d_market_structure: string | null
+          d_signal: string | null
+          h1_image_url: string | null
+          h1_market_structure: string | null
+          h1_signal: string | null
+          h4_image_url: string | null
+          h4_market_structure: string | null
+          h4_signal: string | null
+          id: string
+          log_date: string
+          main_resistance: string | null
+          main_support: string | null
+          minor_sr: string | null
+          mn_image_url: string | null
+          mn_market_structure: string | null
+          mn_signal: string | null
+          updated_at: string
+          user_id: string
+          w_image_url: string | null
+          w_market_structure: string | null
+          w_signal: string | null
+        }
+        Insert: {
+          created_at?: string
+          d_image_url?: string | null
+          d_market_structure?: string | null
+          d_signal?: string | null
+          h1_image_url?: string | null
+          h1_market_structure?: string | null
+          h1_signal?: string | null
+          h4_image_url?: string | null
+          h4_market_structure?: string | null
+          h4_signal?: string | null
+          id?: string
+          log_date: string
+          main_resistance?: string | null
+          main_support?: string | null
+          minor_sr?: string | null
+          mn_image_url?: string | null
+          mn_market_structure?: string | null
+          mn_signal?: string | null
+          updated_at?: string
+          user_id: string
+          w_image_url?: string | null
+          w_market_structure?: string | null
+          w_signal?: string | null
+        }
+        Update: {
+          created_at?: string
+          d_image_url?: string | null
+          d_market_structure?: string | null
+          d_signal?: string | null
+          h1_image_url?: string | null
+          h1_market_structure?: string | null
+          h1_signal?: string | null
+          h4_image_url?: string | null
+          h4_market_structure?: string | null
+          h4_signal?: string | null
+          id?: string
+          log_date?: string
+          main_resistance?: string | null
+          main_support?: string | null
+          minor_sr?: string | null
+          mn_image_url?: string | null
+          mn_market_structure?: string | null
+          mn_signal?: string | null
+          updated_at?: string
+          user_id?: string
+          w_image_url?: string | null
+          w_market_structure?: string | null
+          w_signal?: string | null
+        }
+        Relationships: []
+      }
+      chart_analysis_sessions: {
+        Row: {
+          chart_notes: string | null
+          created_at: string
+          h1_analysis: string | null
+          h1_image_url: string | null
+          h4_analysis: string | null
+          h4_image_url: string | null
+          id: string
+          log_id: string | null
+          session_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chart_notes?: string | null
+          created_at?: string
+          h1_analysis?: string | null
+          h1_image_url?: string | null
+          h4_analysis?: string | null
+          h4_image_url?: string | null
+          id?: string
+          log_id?: string | null
+          session_time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chart_notes?: string | null
+          created_at?: string
+          h1_analysis?: string | null
+          h1_image_url?: string | null
+          h4_analysis?: string | null
+          h4_image_url?: string | null
+          id?: string
+          log_id?: string | null
+          session_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_analysis_sessions_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "chart_analysis_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string

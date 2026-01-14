@@ -23,6 +23,7 @@ const translations: Translations = {
   "nav.goals": { th: "เป้าหมาย", en: "Goals" },
   "nav.notes": { th: "บันทึกประจำวัน", en: "Daily Notes" },
   "nav.knowledge": { th: "คลังความรู้", en: "Knowledge Library" },
+  "nav.chartAnalysis": { th: "บันทึกกราฟ", en: "Chart Analysis" },
   "nav.settings": { th: "ตั้งค่า", en: "Settings" },
   "nav.signOut": { th: "ออกจากระบบ", en: "Sign Out" },
 

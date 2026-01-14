@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   MessageCircle,
+  LineChart,
 } from "lucide-react";
 import RyutaChat from "@/components/chat/RyutaChat";
 import logo from "@/assets/logo.png";
@@ -32,6 +33,7 @@ interface AppLayoutProps {
 const navItems = [
   { path: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
   { path: "/new-trade", labelKey: "nav.newTrade", icon: PlusCircle },
+  { path: "/chart-analysis", labelKey: "nav.chartAnalysis", icon: LineChart },
   { path: "/journal", labelKey: "nav.journal", icon: BookOpen },
   { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
   { path: "/templates", labelKey: "nav.templates", icon: FileStack },

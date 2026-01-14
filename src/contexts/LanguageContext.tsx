@@ -109,6 +109,11 @@ const translations: Translations = {
   "templates.saveTemplate": { th: "บันทึกเทมเพลต", en: "Save Template" },
   "templates.noDescription": { th: "ไม่มีรายละเอียด", en: "No description" },
   "templates.noTemplates": { th: "ยังไม่มีเทมเพลต สร้างใหม่เพื่อเริ่มต้น!", en: "No templates yet. Create one to get started!" },
+  "templates.templateSaved": { th: "บันทึกเทมเพลตแล้ว!", en: "Template saved!" },
+  "templates.scalping": { th: "Scalping", en: "Scalping" },
+  "templates.swing": { th: "Swing", en: "Swing" },
+  "templates.breakout": { th: "Breakout", en: "Breakout" },
+  "templates.reversal": { th: "Reversal", en: "Reversal" },
 
   // Backtesting
   "backtesting.title": { th: "ทดสอบกลยุทธ์", en: "Backtesting Lab" },
@@ -121,6 +126,11 @@ const translations: Translations = {
   "backtesting.rules": { th: "กฎ", en: "Rules" },
   "backtesting.saveStrategy": { th: "บันทึกกลยุทธ์", en: "Save Strategy" },
   "backtesting.noStrategies": { th: "ยังไม่มีกลยุทธ์ สร้างใหม่เพื่อเริ่มทดสอบ!", en: "No strategies yet. Create one to start backtesting!" },
+  "backtesting.strategySaved": { th: "บันทึกกลยุทธ์แล้ว!", en: "Strategy saved!" },
+  "backtesting.statusTesting": { th: "กำลังทดสอบ", en: "Testing" },
+  "backtesting.statusValidated": { th: "ยืนยันแล้ว", en: "Validated" },
+  "backtesting.statusRejected": { th: "ไม่ผ่าน", en: "Rejected" },
+  "backtesting.statusReadyForLive": { th: "พร้อมใช้งานจริง", en: "Ready for Live" },
 
   // Risk Journal
   "riskJournal.title": { th: "บันทึกความเสี่ยง", en: "Risk Journal" },
@@ -207,6 +217,22 @@ const translations: Translations = {
   "settings.thai": { th: "ไทย", en: "Thai" },
   "settings.english": { th: "English", en: "English" },
 
+  // Auth
+  "auth.login": { th: "เข้าสู่ระบบ", en: "Log In" },
+  "auth.signUp": { th: "สมัครสมาชิก", en: "Sign Up" },
+  "auth.password": { th: "รหัสผ่าน", en: "Password" },
+  "auth.createAccount": { th: "สร้างบัญชี", en: "Create Account" },
+  "auth.validationError": { th: "ข้อมูลไม่ถูกต้อง", en: "Validation Error" },
+  "auth.invalidCredentials": { th: "กรุณากรอกอีเมลและรหัสผ่านให้ถูกต้อง", en: "Please enter a valid email and password (min 6 chars)" },
+  "auth.loginFailed": { th: "เข้าสู่ระบบไม่สำเร็จ", en: "Login Failed" },
+  "auth.invalidEmailPassword": { th: "อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่", en: "Invalid email or password. Please try again." },
+  "auth.welcomeBack": { th: "ยินดีต้อนรับกลับ!", en: "Welcome back!" },
+  "auth.loginSuccess": { th: "เข้าสู่ระบบสำเร็จแล้ว", en: "You have successfully logged in." },
+  "auth.signUpFailed": { th: "สมัครสมาชิกไม่สำเร็จ", en: "Sign Up Failed" },
+  "auth.alreadyRegistered": { th: "อีเมลนี้ลงทะเบียนแล้ว กรุณาเข้าสู่ระบบ", en: "This email is already registered. Please log in instead." },
+  "auth.accountCreated": { th: "สร้างบัญชีสำเร็จ!", en: "Account Created!" },
+  "auth.canStartJournaling": { th: "คุณสามารถเริ่มบันทึกเทรดได้แล้ว", en: "You can now start journaling your trades." },
+
   // Common
   "common.save": { th: "บันทึก", en: "Save" },
   "common.cancel": { th: "ยกเลิก", en: "Cancel" },
@@ -215,20 +241,6 @@ const translations: Translations = {
   "common.loading": { th: "กำลังโหลด...", en: "Loading..." },
   "common.error": { th: "ข้อผิดพลาด", en: "Error" },
   "common.success": { th: "สำเร็จ", en: "Success" },
-
-  // Auth
-  "auth.login": { th: "เข้าสู่ระบบ", en: "Login" },
-  "auth.signUp": { th: "สมัครสมาชิก", en: "Sign Up" },
-  "auth.email": { th: "อีเมล", en: "Email" },
-  "auth.password": { th: "รหัสผ่าน", en: "Password" },
-  "auth.confirmPassword": { th: "ยืนยันรหัสผ่าน", en: "Confirm Password" },
-  "auth.createAccount": { th: "สร้างบัญชี", en: "Create Account" },
-  "auth.welcomeBack": { th: "ยินดีต้อนรับกลับ", en: "Welcome back" },
-  "auth.signInToContinue": { th: "เข้าสู่ระบบเพื่อดำเนินการต่อ", en: "Sign in to continue to your trading journal" },
-  "auth.createNewAccount": { th: "สร้างบัญชีใหม่", en: "Create a new account" },
-  "auth.startJourney": { th: "เริ่มต้นเส้นทางการเทรดของคุณ", en: "Start your trading journey today" },
-  "auth.haveAccount": { th: "มีบัญชีแล้ว?", en: "Already have an account?" },
-  "auth.noAccount": { th: "ยังไม่มีบัญชี?", en: "Don't have an account?" },
 };
 
 interface LanguageContextType {

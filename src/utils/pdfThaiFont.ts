@@ -1,65 +1,80 @@
 import jsPDF from "jspdf";
+import sarabunRegularTtf from "@/assets/fonts/Sarabun-Regular.ttf";
+import sarabunBoldTtf from "@/assets/fonts/Sarabun-Bold.ttf";
 
-// Sarabun font from Google Fonts - Regular weight
-const SARABUN_FONT_URL = "https://cdn.jsdelivr.net/npm/@fontsource/sarabun@5.0.28/files/sarabun-thai-400-normal.woff";
+const FONT_FAMILY = "Sarabun";
+const VFS_REGULAR = "Sarabun-Regular.ttf";
+const VFS_BOLD = "Sarabun-Bold.ttf";
 
-// Cache for the font data
-let cachedFontBase64: string | null = null;
+type FontWeight = "normal" | "bold";
 
-/**
- * Fetches the Sarabun Thai font and converts it to base64
- */
-async function fetchSarabunFont(): Promise<string> {
-  if (cachedFontBase64) {
-    return cachedFontBase64;
+// Cache for the font data (base64-encoded TTF)
+const cachedFontBase64: Record<FontWeight, string | null> = {
+  normal: null,
+  bold: null,
+};
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  // Convert in chunks to avoid call stack limits for large files
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
   }
 
-  try {
-    const response = await fetch(SARABUN_FONT_URL);
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer).reduce(
-        (data, byte) => data + String.fromCharCode(byte),
-        ""
-      )
-    );
-    cachedFontBase64 = base64;
-    return base64;
-  } catch (error) {
-    console.error("Failed to load Sarabun font:", error);
-    throw error;
+  return btoa(binary);
+}
+
+async function fetchSarabunFont(weight: FontWeight): Promise<string> {
+  const cached = cachedFontBase64[weight];
+  if (cached) return cached;
+
+  const fontUrl = weight === "bold" ? sarabunBoldTtf : sarabunRegularTtf;
+  const response = await fetch(fontUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to load Sarabun ${weight} font: ${response.status} ${response.statusText}`);
   }
+
+  const base64 = arrayBufferToBase64(await response.arrayBuffer());
+  cachedFontBase64[weight] = base64;
+  return base64;
 }
 
 /**
- * Adds Sarabun Thai font to jsPDF instance and sets it as default
- * Call this after creating jsPDF instance and before any text operations
+ * Adds Sarabun Thai font (TTF) to a jsPDF instance and sets it as default.
+ * Call this after creating jsPDF instance and before any text operations.
  */
 export async function addThaiFont(doc: jsPDF): Promise<void> {
   try {
-    const fontBase64 = await fetchSarabunFont();
-    
-    // Add font to VFS (Virtual File System)
-    doc.addFileToVFS("Sarabun-Regular.ttf", fontBase64);
-    
-    // Register the font
-    doc.addFont("Sarabun-Regular.ttf", "Sarabun", "normal");
-    
-    // Set as default font
-    doc.setFont("Sarabun", "normal");
+    const [regularBase64, boldBase64] = await Promise.all([
+      fetchSarabunFont("normal"),
+      fetchSarabunFont("bold"),
+    ]);
+
+    // Add fonts to VFS (Virtual File System)
+    doc.addFileToVFS(VFS_REGULAR, regularBase64);
+    doc.addFileToVFS(VFS_BOLD, boldBase64);
+
+    // Register fonts
+    doc.addFont(VFS_REGULAR, FONT_FAMILY, "normal");
+    doc.addFont(VFS_BOLD, FONT_FAMILY, "bold");
+
+    // Set as default font (all subsequent doc.text uses this unless overridden)
+    doc.setFont(FONT_FAMILY, "normal");
   } catch (error) {
     console.warn("Could not load Thai font, using default font:", error);
-    // Fallback to default font - Thai characters may not render correctly
   }
 }
 
 /**
- * Pre-loads the Thai font for faster PDF generation
- * Call this when component mounts to cache the font
+ * Pre-loads Sarabun (regular + bold) for faster PDF generation.
  */
 export async function preloadThaiFont(): Promise<void> {
   try {
-    await fetchSarabunFont();
+    await Promise.all([fetchSarabunFont("normal"), fetchSarabunFont("bold")]);
   } catch (error) {
     console.warn("Failed to preload Thai font:", error);
   }

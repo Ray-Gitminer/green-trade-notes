@@ -119,18 +119,19 @@ export default function NewTrade() {
     }
     
     // Lot size = Risk Amount / (SL points)
-    // For XAU/USD: 1 point = $1 per 1 lot, so 0.03 lot * 200 points = $6
-    const lotSize = slPoints > 0 ? riskAmount / slPoints : 0;
-    
-    // Calculate dollar amounts: Lot Size × Points
+    // NOTE: Use the rounded lot size for downstream $ calculations so numbers match what we display.
+    const rawLotSize = slPoints > 0 ? riskAmount / slPoints : 0;
+    const lotSize = Math.round(rawLotSize * 100) / 100;
+
+    // Calculate dollar amounts: Lot Size × Points (based on displayed lot size)
     const slDollars = lotSize * slPoints;
     const tpDollars = lotSize * tpPoints;
-    
+
     const rrRatio = slDistance > 0 ? tpDistance / slDistance : 0;
     
     return { 
-      lotSize: Math.round(lotSize * 100) / 100, 
-      riskAmount: Math.round(riskAmount * 100) / 100, 
+      lotSize,
+      riskAmount: Math.round(riskAmount * 100) / 100,
       rrRatio: Math.round(rrRatio * 100) / 100,
       slPips: Math.round(slPips * 10) / 10,
       slDollars: Math.round(slDollars * 100) / 100,

@@ -96,12 +96,12 @@ export default function NewTrade() {
     let pipValuePerLot: number;
     
     if (isGoldPair) {
-      // XAU/USD: 1 point = $0.01 move, 10 points = 1 pip
+      // XAU/USD: 1 pip = $0.10 price move, pip value = $5 per pip per standard lot (0.5 per 0.1 lot)
       slPoints = Math.round(slDistance * 100);
       tpPoints = Math.round(tpDistance * 100);
       slPips = slDistance * 10;
       tpPips = tpDistance * 10;
-      pipValuePerLot = 1;
+      pipValuePerLot = 5;
     } else if (isJPYPair) {
       // JPY pairs: 1 point = 0.001, 10 points = 1 pip
       slPoints = Math.round(slDistance * 1000);

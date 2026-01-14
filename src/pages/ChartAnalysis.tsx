@@ -104,6 +104,8 @@ export default function ChartAnalysis() {
   const [autoPasteOpen, setAutoPasteOpen] = useState(false);
   const [autoPasteTf, setAutoPasteTf] = useState<keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">>("mn");
 
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
   const [currentLog, setCurrentLog] = useState<LogData>({
     logDate: new Date(),
     mn: emptyTimeframe(),
@@ -603,13 +605,20 @@ export default function ChartAnalysis() {
           }}
         >
           {currentLog[tf].imageUrl ? (
-            <div className="relative w-full">
+            <div className="relative w-full group cursor-pointer">
               <img
                 src={currentLog[tf].imageUrl}
                 alt={label}
-                className="max-h-32 mx-auto rounded object-contain"
+                className="max-h-32 mx-auto rounded object-contain transition-transform group-hover:scale-105"
                 loading="lazy"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxUrl(currentLog[tf].imageUrl);
+                }}
               />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                <span className="text-white text-xs font-medium">คลิกเพื่อขยาย</span>
+              </div>
               <Button
                 size="icon"
                 variant="destructive"
@@ -718,8 +727,20 @@ export default function ChartAnalysis() {
                   }}
                 >
                   {session.h1ImageUrl ? (
-                    <div className="relative w-full">
-                      <img src={session.h1ImageUrl} alt="H1" className="max-h-20 mx-auto rounded object-contain" loading="lazy" />
+                    <div className="relative w-full group cursor-pointer">
+                      <img
+                        src={session.h1ImageUrl}
+                        alt="H1"
+                        className="max-h-20 mx-auto rounded object-contain transition-transform group-hover:scale-105"
+                        loading="lazy"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxUrl(session.h1ImageUrl);
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <span className="text-white text-xs font-medium">คลิกเพื่อขยาย</span>
+                      </div>
                       <Button
                         size="icon"
                         variant="destructive"
@@ -805,8 +826,20 @@ export default function ChartAnalysis() {
                   }}
                 >
                   {session.h4ImageUrl ? (
-                    <div className="relative w-full">
-                      <img src={session.h4ImageUrl} alt="H4" className="max-h-20 mx-auto rounded object-contain" loading="lazy" />
+                    <div className="relative w-full group cursor-pointer">
+                      <img
+                        src={session.h4ImageUrl}
+                        alt="H4"
+                        className="max-h-20 mx-auto rounded object-contain transition-transform group-hover:scale-105"
+                        loading="lazy"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxUrl(session.h4ImageUrl);
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <span className="text-white text-xs font-medium">คลิกเพื่อขยาย</span>
+                      </div>
                       <Button
                         size="icon"
                         variant="destructive"
@@ -1026,6 +1059,21 @@ export default function ChartAnalysis() {
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
         บันทึก
       </Button>
+
+      {/* Lightbox Dialog */}
+      <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          <div className="relative flex items-center justify-center">
+            {lightboxUrl && (
+              <img
+                src={lightboxUrl}
+                alt="Preview"
+                className="max-w-full max-h-[85vh] object-contain rounded"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

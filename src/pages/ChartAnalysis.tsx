@@ -568,24 +568,45 @@ export default function ChartAnalysis() {
         yPos += lineHeight + 3;
 
         // Notes lines (H4 Analysis, H1 Analysis, Chart Notes)
-        const noteLines = [
-          session?.h4_analysis || "",
-          session?.h1_analysis || "",
-          session?.chart_notes || "",
+        const noteContents = [
+          { label: "H4:", text: session?.h4_analysis || "" },
+          { label: "H1:", text: session?.h1_analysis || "" },
+          { label: "โน้ต:", text: session?.chart_notes || "" },
         ];
 
-        for (let i = 0; i < 5; i++) {
-          const noteText = noteLines[i] || "";
-          if (noteText) {
+        doc.setFont("Sarabun", "normal");
+        doc.setFontSize(smallFontSize);
+
+        for (const note of noteContents) {
+          if (note.text) {
+            // Print label
+            doc.setFont("Sarabun", "bold");
+            doc.text(note.label, margin + 5, yPos);
             doc.setFont("Sarabun", "normal");
-            doc.setFontSize(smallFontSize);
-            doc.text(noteText.substring(0, 80), margin + 5, yPos);
+            
+            // Split long text into multiple lines using jsPDF's splitTextToSize
+            const labelWidth = doc.getTextWidth(note.label + " ");
+            const maxTextWidth = contentWidth - 10 - labelWidth;
+            const wrappedLines = doc.splitTextToSize(note.text, maxTextWidth);
+            
+            // Print first line after label
+            if (wrappedLines.length > 0) {
+              doc.text(wrappedLines[0], margin + 5 + labelWidth, yPos);
+            }
+            yPos += lineHeight + 1;
+            
+            // Print remaining lines
+            for (let lineIdx = 1; lineIdx < wrappedLines.length; lineIdx++) {
+              yPos = checkPageBreak(yPos, lineHeight + 2);
+              doc.text(wrappedLines[lineIdx], margin + 10, yPos);
+              yPos += lineHeight + 1;
+            }
           }
-          drawDottedLine(yPos);
-          yPos += lineHeight + 1;
         }
 
-        yPos += 6;
+        // Add some spacing after notes
+        drawDottedLine(yPos);
+        yPos += lineHeight + 6;
       }
 
       // ========== IMAGES PAGE ==========

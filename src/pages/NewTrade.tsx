@@ -74,12 +74,14 @@ export default function NewTrade() {
     const riskPct = parseFloat(formData.riskPercent) || 0;
     const entry = parseFloat(formData.entryPrice) || 0;
     const sl = parseFloat(formData.stopLoss) || 0;
+    const tp = parseFloat(formData.takeProfit) || 0;
     
     if (!entry || !sl || balance <= 0 || riskPct <= 0) {
-      return { lotSize: 0, riskAmount: 0, rrRatio: 0, slPips: 0 };
+      return { lotSize: 0, riskAmount: 0, rrRatio: 0, slPips: 0, slDollars: 0, tpDollars: 0 };
     }
     
     const slDistance = Math.abs(entry - sl);
+    const tpDistance = Math.abs(tp - entry);
     const riskAmount = balance * (riskPct / 100);
     
     // Determine pip value and lot value based on pair type
@@ -88,38 +90,46 @@ export default function NewTrade() {
     const isGoldPair = pair.includes("XAU");
     
     let slPips: number;
+    let tpPips: number;
     let pipValuePerLot: number;
     
     if (isGoldPair) {
       // XAU/USD: 1 pip = $0.1, $1 per pip per standard lot, price moves in $0.01
-      slPips = slDistance * 10; // Convert dollar move to pips (10 pips per $1)
-      pipValuePerLot = 1; // $1 per pip per 1 lot (100 oz)
+      slPips = slDistance * 10;
+      tpPips = tpDistance * 10;
+      pipValuePerLot = 1;
     } else if (isJPYPair) {
       // JPY pairs: 1 pip = 0.01
       slPips = slDistance * 100;
-      pipValuePerLot = 10; // Approx $10 per pip per standard lot
+      tpPips = tpDistance * 100;
+      pipValuePerLot = 10;
     } else {
       // Standard pairs: 1 pip = 0.0001
       slPips = slDistance * 10000;
-      pipValuePerLot = 10; // $10 per pip per standard lot
+      tpPips = tpDistance * 10000;
+      pipValuePerLot = 10;
     }
     
     // Lot size = Risk Amount / (SL in pips * pip value per lot)
     const lotSize = slPips > 0 ? riskAmount / (slPips * pipValuePerLot) : 0;
     
-    const tp = parseFloat(formData.takeProfit) || 0;
-    const tpDistance = Math.abs(tp - entry);
+    // Calculate dollar amounts based on calculated lot size
+    const slDollars = lotSize * slPips * pipValuePerLot;
+    const tpDollars = lotSize * tpPips * pipValuePerLot;
+    
     const rrRatio = slDistance > 0 ? tpDistance / slDistance : 0;
     
     return { 
       lotSize: Math.round(lotSize * 100) / 100, 
       riskAmount: Math.round(riskAmount * 100) / 100, 
       rrRatio: Math.round(rrRatio * 100) / 100,
-      slPips: Math.round(slPips * 10) / 10
+      slPips: Math.round(slPips * 10) / 10,
+      slDollars: Math.round(slDollars * 100) / 100,
+      tpDollars: Math.round(tpDollars * 100) / 100
     };
   };
 
-  const { lotSize, riskAmount, rrRatio, slPips } = calculateLotSize();
+  const { lotSize, riskAmount, rrRatio, slPips, slDollars, tpDollars } = calculateLotSize();
 
   const handleSubmit = async () => {
     if (!user || !formData.pair) {
@@ -201,10 +211,16 @@ export default function NewTrade() {
             <div className="space-y-2">
               <Label>{t("newTrade.stopLoss")}</Label>
               <Input type="number" step="0.00001" value={formData.stopLoss} onChange={(e) => setFormData({ ...formData, stopLoss: e.target.value })} />
+              {slDollars > 0 && (
+                <p className="text-xs text-destructive">💰 -{slDollars.toLocaleString()} USD</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t("newTrade.takeProfit")}</Label>
               <Input type="number" step="0.00001" value={formData.takeProfit} onChange={(e) => setFormData({ ...formData, takeProfit: e.target.value })} />
+              {tpDollars > 0 && (
+                <p className="text-xs text-profit">💰 +{tpDollars.toLocaleString()} USD</p>
+              )}
             </div>
           </CardContent>
         </Card>

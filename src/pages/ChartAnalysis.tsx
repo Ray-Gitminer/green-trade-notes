@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,14 +7,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { 
-  Loader2, Save, Calendar, Image, Upload, X, Download, FileSpreadsheet, 
-  FileText, Clock, TrendingUp, TrendingDown, Minus, Plus, Trash2, File
+import {
+  Loader2,
+  Save,
+  Calendar,
+  Image,
+  Upload,
+  X,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Plus,
+  Trash2,
+  File,
+  ClipboardPaste,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -56,9 +72,22 @@ interface LogData {
 }
 
 const emptyTimeframe = (): TimeframeData => ({ signal: "", marketStructure: "", imageUrl: "" });
-const emptySession = (time: string): SessionData => ({ 
-  sessionTime: time, h1Analysis: "", h4Analysis: "", chartNotes: "", h1ImageUrl: "", h4ImageUrl: "" 
+const emptySession = (time: string): SessionData => ({
+  sessionTime: time,
+  h1Analysis: "",
+  h4Analysis: "",
+  chartNotes: "",
+  h1ImageUrl: "",
+  h4ImageUrl: "",
 });
+
+const parseSigTrail = (raw: string): string[] =>
+  raw
+    .split(/[,\n\t ]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const formatSigTrail = (items: string[]): string => items.join(",");
 
 export default function ChartAnalysis() {
   const { user } = useAuth();
@@ -71,7 +100,10 @@ export default function ChartAnalysis() {
   const [exportStartDate, setExportStartDate] = useState<Date>(new Date());
   const [exportEndDate, setExportEndDate] = useState<Date>(new Date());
   const [logs, setLogs] = useState<LogData[]>([]);
-  
+
+  const [autoPasteOpen, setAutoPasteOpen] = useState(false);
+  const [autoPasteTf, setAutoPasteTf] = useState<keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">>("mn");
+
   const [currentLog, setCurrentLog] = useState<LogData>({
     logDate: new Date(),
     mn: emptyTimeframe(),
@@ -427,6 +459,70 @@ export default function ChartAnalysis() {
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
+  const SigTrailChips = ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+  }) => {
+    const items = useMemo(() => parseSigTrail(value), [value]);
+    const [draft, setDraft] = useState("");
+
+    const commitDraft = useCallback(() => {
+      const nextItems = [...items, ...parseSigTrail(draft)];
+      const uniq = Array.from(new Set(nextItems));
+      const trimmed = uniq.map((x) => x.trim()).filter(Boolean).slice(0, 12); // กันยาวเกิน
+      onChange(formatSigTrail(trimmed));
+      setDraft("");
+    }, [draft, items, onChange]);
+
+    const removeItem = useCallback(
+      (it: string) => {
+        onChange(formatSigTrail(items.filter((x) => x !== it)));
+      },
+      [items, onChange],
+    );
+
+    return (
+      <div className="min-h-9 rounded-md border border-input bg-background px-2 py-1 flex flex-wrap items-center gap-1">
+        {items.map((it) => (
+          <Badge key={it} variant="secondary" className="gap-1">
+            <span className="text-xs">{it}</span>
+            <button
+              type="button"
+              className="rounded-sm hover:opacity-80"
+              onClick={() => removeItem(it)}
+              aria-label={`ลบ ${it}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              commitDraft();
+            }
+            if (e.key === "Backspace" && !draft && items.length) {
+              removeItem(items[items.length - 1]);
+            }
+          }}
+          onBlur={() => {
+            if (draft.trim()) commitDraft();
+          }}
+          placeholder={items.length ? "เพิ่ม... (Enter)" : "ไล้หลัง Sig เช่น 1,2,3,4"}
+          className="flex-1 min-w-[70px] bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+          inputMode="numeric"
+        />
+      </div>
+    );
+  };
+
   const TimeframeCard = ({ 
     label, 
     tf 
@@ -453,17 +549,17 @@ export default function ChartAnalysis() {
               <SelectValue placeholder="Signal" />
             </SelectTrigger>
             <SelectContent>
-              {SIGNALS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {SIGNALS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          
-          <Textarea
-            placeholder="ไล้หลัง Sig (พิมพ์ได้หลายตัว เช่น 1,2,3,4,5)"
+
+          <SigTrailChips
             value={currentLog[tf].marketStructure}
-            onChange={(e) => updateTimeframe(tf, "marketStructure", e.target.value)}
-            className="h-9 min-h-0 resize-none"
-            rows={1}
-            maxLength={100}
+            onChange={(next) => updateTimeframe(tf, "marketStructure", next)}
           />
         </div>
 

@@ -391,6 +391,32 @@ export default function ChartAnalysis() {
     toast({ title: "ส่งออกสำเร็จ" });
   };
 
+  // Helper function to load image and convert to base64
+  const loadImageAsBase64 = (url: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (!url) {
+        resolve(null);
+        return;
+      }
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg", 0.8));
+        } else {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  };
+
   const exportToPDF = async () => {
     const data = await fetchLogsForExport(exportStartDate, exportEndDate);
     if (!data.length) {
@@ -398,38 +424,208 @@ export default function ChartAnalysis() {
       return;
     }
 
-    const doc = new jsPDF({ orientation: "landscape" });
-    
-    // Title
-    doc.setFontSize(18);
-    doc.text("Chart Analysis Log", 14, 20);
-    doc.setFontSize(10);
-    doc.text(`${format(exportStartDate, "dd/MM/yyyy")} - ${format(exportEndDate, "dd/MM/yyyy")}`, 14, 28);
-    
-    // Table data
-    const tableData = data.map(log => [
-      log.log_date,
-      `${log.mn_signal || "-"} / ${log.mn_market_structure || "-"}`,
-      `${log.w_signal || "-"} / ${log.w_market_structure || "-"}`,
-      `${log.d_signal || "-"} / ${log.d_market_structure || "-"}`,
-      `${log.h4_signal || "-"} / ${log.h4_market_structure || "-"}`,
-      `${log.h1_signal || "-"} / ${log.h1_market_structure || "-"}`,
-      log.main_resistance || "-",
-      log.minor_sr || "-",
-      log.main_support || "-"
-    ]);
+    toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
 
-    (doc as any).autoTable({
-      head: [["Date", "MN", "W", "D", "H4", "H1", "Resistance", "S/R", "Support"]],
-      body: tableData,
-      startY: 35,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [16, 185, 129] }
-    });
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentWidth = pageWidth - margin * 2;
+    const imageWidth = (contentWidth - 8) / 3; // 3 images per row with gaps
+    const imageHeight = 40;
+
+    for (let logIndex = 0; logIndex < data.length; logIndex++) {
+      const log = data[logIndex];
+      if (logIndex > 0) doc.addPage();
+
+      let yPos = margin;
+
+      // Header with date
+      doc.setFillColor(16, 185, 129);
+      doc.rect(margin, yPos, contentWidth, 12, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.text(`Chart Analysis - ${log.log_date}`, margin + 4, yPos + 8);
+      yPos += 16;
+
+      // Support/Resistance section
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPos, contentWidth, 14, "F");
+      doc.text(`Resistance: ${log.main_resistance || "-"}`, margin + 4, yPos + 5);
+      doc.text(`S/R: ${log.minor_sr || "-"}`, margin + contentWidth / 3, yPos + 5);
+      doc.text(`Support: ${log.main_support || "-"}`, margin + (contentWidth * 2) / 3, yPos + 5);
+      yPos += 18;
+
+      // Timeframes section
+      const timeframes = [
+        { name: "MN (Monthly)", signal: log.mn_signal, structure: log.mn_market_structure, imageUrl: log.mn_image_url },
+        { name: "W (Weekly)", signal: log.w_signal, structure: log.w_market_structure, imageUrl: log.w_image_url },
+        { name: "D (Daily)", signal: log.d_signal, structure: log.d_market_structure, imageUrl: log.d_image_url },
+        { name: "H4 (4 Hour)", signal: log.h4_signal, structure: log.h4_market_structure, imageUrl: log.h4_image_url },
+        { name: "H1 (1 Hour)", signal: log.h1_signal, structure: log.h1_market_structure, imageUrl: log.h1_image_url },
+      ];
+
+      // Timeframe header
+      doc.setFillColor(59, 130, 246);
+      doc.rect(margin, yPos, contentWidth, 8, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.text("Timeframe Analysis", margin + 4, yPos + 5.5);
+      yPos += 10;
+
+      // Load all timeframe images
+      const tfImages = await Promise.all(timeframes.map(tf => loadImageAsBase64(tf.imageUrl || "")));
+
+      // Display timeframes in rows (3 per row)
+      for (let i = 0; i < timeframes.length; i += 3) {
+        const rowTfs = timeframes.slice(i, i + 3);
+        const rowImages = tfImages.slice(i, i + 3);
+
+        // Check if we need a new page
+        if (yPos + imageHeight + 20 > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        // Draw timeframe boxes
+        for (let j = 0; j < rowTfs.length; j++) {
+          const tf = rowTfs[j];
+          const xPos = margin + j * (imageWidth + 4);
+
+          // TF header
+          doc.setFillColor(240, 240, 240);
+          doc.rect(xPos, yPos, imageWidth, 6, "F");
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.text(tf.name, xPos + 2, yPos + 4);
+
+          // Signal badge
+          const signalColor = tf.signal === "Buy" ? [16, 185, 129] : tf.signal === "Sell" ? [239, 68, 68] : [156, 163, 175];
+          doc.setFillColor(signalColor[0], signalColor[1], signalColor[2]);
+          doc.roundedRect(xPos + imageWidth - 18, yPos + 1, 16, 4, 1, 1, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(6);
+          doc.text(tf.signal || "-", xPos + imageWidth - 16, yPos + 3.8);
+
+          // Structure text
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(6);
+          doc.text(`Structure: ${tf.structure || "-"}`, xPos + 2, yPos + 10);
+
+          // Image
+          if (rowImages[j]) {
+            try {
+              doc.addImage(rowImages[j]!, "JPEG", xPos, yPos + 12, imageWidth, imageHeight - 12);
+            } catch {
+              doc.setFillColor(200, 200, 200);
+              doc.rect(xPos, yPos + 12, imageWidth, imageHeight - 12, "F");
+              doc.setTextColor(100, 100, 100);
+              doc.text("No image", xPos + imageWidth / 2 - 8, yPos + imageHeight / 2 + 6);
+            }
+          } else {
+            doc.setFillColor(200, 200, 200);
+            doc.rect(xPos, yPos + 12, imageWidth, imageHeight - 12, "F");
+            doc.setTextColor(100, 100, 100);
+            doc.text("No image", xPos + imageWidth / 2 - 8, yPos + imageHeight / 2 + 6);
+          }
+        }
+        yPos += imageHeight + 6;
+      }
+
+      // Sessions section
+      const sessions = log.chart_analysis_sessions || [];
+      if (sessions.length > 0) {
+        // Check if we need a new page
+        if (yPos + 20 > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        // Session header
+        doc.setFillColor(139, 92, 246);
+        doc.rect(margin, yPos, contentWidth, 8, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text("Session Analysis", margin + 4, yPos + 5.5);
+        yPos += 10;
+
+        for (const session of sessions) {
+          // Check if we need a new page
+          if (yPos + 60 > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin;
+          }
+
+          // Session time header
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margin, yPos, contentWidth, 6, "F");
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(9);
+          doc.text(`Session ${session.session_time}`, margin + 4, yPos + 4);
+          yPos += 8;
+
+          // Load session images
+          const [h4Img, h1Img] = await Promise.all([
+            loadImageAsBase64(session.h4_image_url || ""),
+            loadImageAsBase64(session.h1_image_url || ""),
+          ]);
+
+          const halfWidth = (contentWidth - 4) / 2;
+          const sessionImgHeight = 35;
+
+          // H4 section
+          doc.setFillColor(245, 245, 245);
+          doc.rect(margin, yPos, halfWidth, sessionImgHeight + 12, "F");
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.text("H4", margin + 2, yPos + 4);
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(6);
+          const h4AnalysisText = session.h4_analysis || "-";
+          doc.text(h4AnalysisText.substring(0, 40), margin + 10, yPos + 4);
+          
+          if (h4Img) {
+            try {
+              doc.addImage(h4Img, "JPEG", margin + 2, yPos + 6, halfWidth - 4, sessionImgHeight);
+            } catch {}
+          }
+
+          // H1 section
+          const h1X = margin + halfWidth + 4;
+          doc.setFillColor(245, 245, 245);
+          doc.rect(h1X, yPos, halfWidth, sessionImgHeight + 12, "F");
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.text("H1", h1X + 2, yPos + 4);
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(6);
+          const h1AnalysisText = session.h1_analysis || "-";
+          doc.text(h1AnalysisText.substring(0, 40), h1X + 10, yPos + 4);
+          
+          if (h1Img) {
+            try {
+              doc.addImage(h1Img, "JPEG", h1X + 2, yPos + 6, halfWidth - 4, sessionImgHeight);
+            } catch {}
+          }
+
+          yPos += sessionImgHeight + 14;
+
+          // Chart notes
+          if (session.chart_notes) {
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(7);
+            doc.text(`Notes: ${session.chart_notes.substring(0, 100)}`, margin + 2, yPos);
+            yPos += 6;
+          }
+        }
+      }
+    }
 
     doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
     setExportDialogOpen(false);
-    toast({ title: "ส่งออก PDF สำเร็จ" });
+    toast({ title: "ส่งออก PDF สำเร็จ", description: "รวมรูปภาพทุก TF และ Sessions" });
   };
 
   // Update timeframe data

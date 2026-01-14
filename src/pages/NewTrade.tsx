@@ -76,20 +76,35 @@ export default function NewTrade() {
     const sl = parseFloat(formData.stopLoss) || 0;
     
     if (!entry || !sl || balance <= 0 || riskPct <= 0) {
-      return { lotSize: 0, riskAmount: 0, rrRatio: 0, pipValue: 0 };
+      return { lotSize: 0, riskAmount: 0, rrRatio: 0, slPips: 0 };
     }
     
     const slDistance = Math.abs(entry - sl);
     const riskAmount = balance * (riskPct / 100);
     
-    // Calculate pips (assuming 4 decimal places for most pairs, 2 for JPY)
-    const isJPYPair = formData.pair.includes("JPY");
-    const pipMultiplier = isJPYPair ? 100 : 10000;
-    const slPips = slDistance * pipMultiplier;
+    // Determine pip value and lot value based on pair type
+    const pair = formData.pair;
+    const isJPYPair = pair.includes("JPY");
+    const isGoldPair = pair.includes("XAU");
     
-    // Standard lot size calculation: Risk Amount / (SL in pips * pip value per lot)
-    // For simplicity, assuming $10 per pip per standard lot
-    const pipValuePerLot = isJPYPair ? 10 : 10;
+    let slPips: number;
+    let pipValuePerLot: number;
+    
+    if (isGoldPair) {
+      // XAU/USD: 1 pip = $0.1, $1 per pip per standard lot, price moves in $0.01
+      slPips = slDistance * 10; // Convert dollar move to pips (10 pips per $1)
+      pipValuePerLot = 1; // $1 per pip per 1 lot (100 oz)
+    } else if (isJPYPair) {
+      // JPY pairs: 1 pip = 0.01
+      slPips = slDistance * 100;
+      pipValuePerLot = 10; // Approx $10 per pip per standard lot
+    } else {
+      // Standard pairs: 1 pip = 0.0001
+      slPips = slDistance * 10000;
+      pipValuePerLot = 10; // $10 per pip per standard lot
+    }
+    
+    // Lot size = Risk Amount / (SL in pips * pip value per lot)
     const lotSize = slPips > 0 ? riskAmount / (slPips * pipValuePerLot) : 0;
     
     const tp = parseFloat(formData.takeProfit) || 0;
@@ -100,11 +115,11 @@ export default function NewTrade() {
       lotSize: Math.round(lotSize * 100) / 100, 
       riskAmount: Math.round(riskAmount * 100) / 100, 
       rrRatio: Math.round(rrRatio * 100) / 100,
-      pipValue: slPips
+      slPips: Math.round(slPips * 10) / 10
     };
   };
 
-  const { lotSize, riskAmount, rrRatio } = calculateLotSize();
+  const { lotSize, riskAmount, rrRatio, slPips } = calculateLotSize();
 
   const handleSubmit = async () => {
     if (!user || !formData.pair) {
@@ -213,6 +228,7 @@ export default function NewTrade() {
             </div>
             <div className="text-sm text-muted-foreground">{t("newTrade.riskAmount")}: <span className="text-foreground font-medium">${riskAmount}</span></div>
             <div className="text-sm text-muted-foreground">{t("newTrade.rrRatio")}: <span className="text-foreground font-medium">{rrRatio > 0 ? `${rrRatio}:1` : "—"}</span></div>
+            <div className="text-sm text-muted-foreground">SL Pips: <span className="text-foreground font-medium">{slPips > 0 ? slPips : "—"}</span></div>
           </CardContent>
         </Card>
 

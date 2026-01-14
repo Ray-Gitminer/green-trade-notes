@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import SessionCardContent, { type SessionData } from "@/components/chart-analysis/SessionCardContent";
+import { addThaiFont, preloadThaiFont } from "@/utils/pdfThaiFont";
 
 const SIGNALS = ["Buy", "Sell", "Neutral"];
 const SESSION_TIMES = ["07:00", "11:00", "15:00", "19:00"];
@@ -184,6 +185,11 @@ export default function ChartAnalysis() {
   useEffect(() => {
     fetchLogForDate(selectedDate);
   }, [selectedDate, fetchLogForDate]);
+
+  // Preload Thai font for PDF export
+  useEffect(() => {
+    preloadThaiFont();
+  }, []);
 
   // Upload image
   const uploadImage = async (file: File, folder: string): Promise<string> => {
@@ -427,6 +433,10 @@ export default function ChartAnalysis() {
     toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    
+    // Add Thai font support for proper character rendering
+    await addThaiFont(doc);
+    
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 10;

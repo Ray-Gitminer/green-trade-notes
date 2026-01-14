@@ -69,7 +69,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
         <div className="flex items-center gap-2">
-          <img src={logo} alt="Mae Pla" className="h-8 w-8" />
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/30 rounded-full blur-md animate-pulse-glow" />
+            <img src={logo} alt="Mae Pla" className="relative h-10 w-10 rounded-full object-cover drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+          </div>
           <span className="text-lg font-bold text-primary">Mae Pla</span>
         </div>
         <Button
@@ -91,7 +94,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
-          <img src={logo} alt="Mae Pla Green Pen" className="h-12 w-12" />
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/40 rounded-full blur-lg animate-pulse-glow" />
+            <img src={logo} alt="Mae Pla Green Pen" className="relative h-14 w-14 rounded-full object-cover drop-shadow-[0_0_12px_rgba(16,185,129,0.7)]" />
+          </div>
           <div>
             <h1 className="text-lg font-bold text-primary">{t("app.title")}</h1>
             <p className="text-xs text-muted-foreground">{t("app.subtitle")}</p>

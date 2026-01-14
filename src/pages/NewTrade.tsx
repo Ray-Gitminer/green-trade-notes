@@ -28,19 +28,46 @@ export default function NewTrade() {
   const [isPaperTrade, setIsPaperTrade] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   
-  // Check for Ryuta analysis passed from chat
+  // Check for Ryuta analysis and parsed trade data passed from chat
   const ryutaAnalysis = (location.state as { ryutaAnalysis?: string })?.ryutaAnalysis || "";
+  const ryutaTradeData = (location.state as { ryutaTradeData?: { 
+    pair?: string; 
+    type?: "BUY" | "SELL"; 
+    entry?: number; 
+    sl?: number; 
+    tp?: number;
+    confidence?: number;
+  } })?.ryutaTradeData;
   
+  // Map Ryuta pair format to our format (e.g., XAUUSD -> XAU/USD)
+  const formatPairFromRyuta = (pair?: string): string => {
+    if (!pair) return "";
+    // Try to match common pairs
+    const pairMap: Record<string, string> = {
+      "XAUUSD": "XAU/USD",
+      "EURUSD": "EUR/USD",
+      "GBPUSD": "GBP/USD",
+      "USDJPY": "USD/JPY",
+      "AUDUSD": "AUD/USD",
+      "USDCAD": "USD/CAD",
+      "NZDUSD": "NZD/USD",
+      "EURGBP": "EUR/GBP",
+      "EURJPY": "EUR/JPY",
+      "GBPJPY": "GBP/JPY"
+    };
+    return pairMap[pair.toUpperCase()] || pair;
+  };
+
   const [formData, setFormData] = useState({
-    pair: "",
-    tradeType: "buy",
-    entryPrice: "",
-    stopLoss: "",
-    takeProfit: "",
+    pair: formatPairFromRyuta(ryutaTradeData?.pair),
+    tradeType: ryutaTradeData?.type?.toLowerCase() || "buy",
+    entryPrice: ryutaTradeData?.entry?.toString() || "",
+    stopLoss: ryutaTradeData?.sl?.toString() || "",
+    takeProfit: ryutaTradeData?.tp?.toString() || "",
     accountBalance: "10000",
     riskPercent: "1",
     emotionalState: "neutral",
-    confidenceLevel: [7],
+    confidenceLevel: [ryutaTradeData?.confidence || 7],
     preTradeNotes: "",
     analysis: ryutaAnalysis ? `--- Ryuta Analysis ---\n${ryutaAnalysis}` : "",
     mnSignal: "", mnNotes: "",

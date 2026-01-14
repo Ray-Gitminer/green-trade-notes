@@ -405,6 +405,7 @@ export default function ChartAnalysis() {
     tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">; 
   }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const dropZoneRef = useRef<HTMLDivElement>(null);
     
     return (
       <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border/50">
@@ -427,17 +428,28 @@ export default function ChartAnalysis() {
           </Select>
           
           <Input 
-            placeholder="ไล้หลัง Sig"
+            placeholder="ไล้หลัง Sig (เช่น 1,2,3,4)"
             value={currentLog[tf].marketStructure}
             onChange={(e) => updateTimeframe(tf, "marketStructure", e.target.value)}
             className="h-9"
+            maxLength={100}
           />
         </div>
 
         <div 
-          className="border-2 border-dashed border-border/50 rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 transition-colors min-h-[100px] flex flex-col items-center justify-center"
+          ref={dropZoneRef}
+          tabIndex={0}
+          className="border-2 border-dashed border-border/50 rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[100px] flex flex-col items-center justify-center"
           onPaste={(e) => handlePaste(e, (url) => updateTimeframe(tf, "imageUrl", url))}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            dropZoneRef.current?.focus();
+            fileInputRef.current?.click();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              fileInputRef.current?.click();
+            }
+          }}
         >
           {currentLog[tf].imageUrl ? (
             <div className="relative w-full">
@@ -461,7 +473,8 @@ export default function ChartAnalysis() {
           ) : (
             <>
               <Image className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-xs text-muted-foreground">วาง (Ctrl+V) หรือคลิกอัพโหลด</p>
+              <p className="text-xs text-muted-foreground">คลิกที่นี่แล้ววาง (Ctrl+V)</p>
+              <p className="text-xs text-muted-foreground">หรือคลิกเพื่ออัพโหลด</p>
             </>
           )}
         </div>
@@ -479,6 +492,8 @@ export default function ChartAnalysis() {
   const SessionCard = ({ session, index }: { session: SessionData; index: number }) => {
     const h1InputRef = useRef<HTMLInputElement>(null);
     const h4InputRef = useRef<HTMLInputElement>(null);
+    const h1DropZoneRef = useRef<HTMLDivElement>(null);
+    const h4DropZoneRef = useRef<HTMLDivElement>(null);
     
     return (
       <Card className="glass-card">
@@ -500,9 +515,19 @@ export default function ChartAnalysis() {
             <div className="space-y-2">
               <Label className="text-sm">H1 Chart</Label>
               <div 
-                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 transition-colors min-h-[80px] flex flex-col items-center justify-center"
+                ref={h1DropZoneRef}
+                tabIndex={0}
+                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
                 onPaste={(e) => handlePaste(e, (url) => updateSession(index, "h1ImageUrl", url))}
-                onClick={() => h1InputRef.current?.click()}
+                onClick={() => {
+                  h1DropZoneRef.current?.focus();
+                  h1InputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    h1InputRef.current?.click();
+                  }
+                }}
               >
                 {session.h1ImageUrl ? (
                   <div className="relative w-full">
@@ -519,7 +544,7 @@ export default function ChartAnalysis() {
                 ) : (
                   <div className="text-xs text-muted-foreground">
                     <Upload className="h-5 w-5 mx-auto mb-1" />
-                    วาง/อัพโหลด
+                    คลิกแล้ววาง/อัพโหลด
                   </div>
                 )}
               </div>
@@ -530,9 +555,19 @@ export default function ChartAnalysis() {
             <div className="space-y-2">
               <Label className="text-sm">H4 Chart</Label>
               <div 
-                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 transition-colors min-h-[80px] flex flex-col items-center justify-center"
+                ref={h4DropZoneRef}
+                tabIndex={0}
+                className="border-2 border-dashed border-border/50 rounded-lg p-2 text-center cursor-pointer hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[80px] flex flex-col items-center justify-center"
                 onPaste={(e) => handlePaste(e, (url) => updateSession(index, "h4ImageUrl", url))}
-                onClick={() => h4InputRef.current?.click()}
+                onClick={() => {
+                  h4DropZoneRef.current?.focus();
+                  h4InputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    h4InputRef.current?.click();
+                  }
+                }}
               >
                 {session.h4ImageUrl ? (
                   <div className="relative w-full">
@@ -549,7 +584,7 @@ export default function ChartAnalysis() {
                 ) : (
                   <div className="text-xs text-muted-foreground">
                     <Upload className="h-5 w-5 mx-auto mb-1" />
-                    วาง/อัพโหลด
+                    คลิกแล้ววาง/อัพโหลด
                   </div>
                 )}
               </div>

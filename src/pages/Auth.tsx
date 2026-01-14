@@ -88,16 +88,19 @@ export default function Auth() {
     <div className="min-h-screen bg-background candlestick-pattern flex items-center justify-center p-4">
       <Card className="w-full max-w-md glass-card border-border/50">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-            <img src={logo} alt="Mae Pla Green Pen" className="w-16 h-16 object-contain" />
-          </div>
-          <div>
-            <CardTitle className="text-2xl font-bold text-foreground">
-              {t("app.title")}
-            </CardTitle>
-            <CardDescription className="text-muted-foreground mt-1">
-              🐟 {t("app.subtitle")}
-            </CardDescription>
+          <div className="flex items-center justify-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/40 rounded-full blur-lg animate-pulse-glow" />
+              <img src={logo} alt="Mae Pla Green Pen" className="relative h-16 w-16 rounded-full object-cover drop-shadow-[0_0_12px_rgba(16,185,129,0.7)]" />
+            </div>
+            <div className="text-left">
+              <CardTitle className="text-xl font-bold text-foreground whitespace-nowrap">
+                {t("app.title")}
+              </CardTitle>
+              <CardDescription className="text-muted-foreground text-sm whitespace-nowrap">
+                🐟 {t("app.subtitle")}
+              </CardDescription>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

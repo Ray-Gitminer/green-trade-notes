@@ -873,7 +873,8 @@ export default function ChartAnalysis() {
     );
   };
 
-  const TimeframeCard = ({ 
+  // Compact Table Row for each Timeframe
+  const TimeframeRow = ({ 
     label, 
     tf 
   }: { 
@@ -884,62 +885,52 @@ export default function ChartAnalysis() {
     const dropZoneRef = useRef<HTMLDivElement>(null);
     
     return (
-      <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border/50">
-        <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">{label}</Label>
+      <div className="grid grid-cols-[60px_100px_1fr_auto] sm:grid-cols-[80px_110px_1fr_auto] gap-2 items-center py-3 px-2 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors">
+        {/* TF Label */}
+        <div className="flex items-center gap-1.5">
           <SignalIcon signal={currentLog[tf].signal} />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2">
-          <Select 
-            value={currentLog[tf].signal} 
-            onValueChange={(v) => updateTimeframe(tf, "signal", v)}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Signal" />
-            </SelectTrigger>
-            <SelectContent>
-              {SIGNALS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <SigTrailChips
-            value={currentLog[tf].marketStructure}
-            onChange={(next) => updateTimeframe(tf, "marketStructure", next)}
-          />
+          <span className="font-semibold text-sm">{label}</span>
         </div>
 
+        {/* Signal Select */}
+        <Select 
+          value={currentLog[tf].signal} 
+          onValueChange={(v) => updateTimeframe(tf, "signal", v)}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Sig" />
+          </SelectTrigger>
+          <SelectContent>
+            {SIGNALS.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Details / Market Structure */}
+        <SigTrailChips
+          value={currentLog[tf].marketStructure}
+          onChange={(next) => updateTimeframe(tf, "marketStructure", next)}
+        />
+
+        {/* Image Upload */}
         <div
           ref={dropZoneRef}
           tabIndex={0}
-          className="border-2 border-dashed border-border/50 rounded-lg p-3 text-center hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors min-h-[100px] flex flex-col items-center justify-center"
+          className="flex items-center gap-1"
           onClick={() => {
             setPasteTarget("charts", (url) => updateTimeframe(tf, "imageUrl", url));
             dropZoneRef.current?.focus();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              fileInputRef.current?.click();
-            }
-          }}
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.add("border-primary", "bg-primary/5");
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
           }}
           onDrop={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.remove("border-primary", "bg-primary/5");
             const file = e.dataTransfer.files?.[0];
             if (file && file.type.startsWith("image/")) {
               try {
@@ -953,50 +944,42 @@ export default function ChartAnalysis() {
           }}
         >
           {currentLog[tf].imageUrl ? (
-            <div className="relative w-full group cursor-pointer">
+            <div className="relative group">
               <img
                 src={currentLog[tf].imageUrl}
                 alt={label}
-                className="max-h-32 mx-auto rounded object-contain transition-transform group-hover:scale-105"
-                loading="lazy"
+                className="h-10 w-14 object-cover rounded border border-border cursor-pointer hover:opacity-80"
                 onClick={(e) => {
                   e.stopPropagation();
                   setLightboxUrl(currentLog[tf].imageUrl);
                 }}
               />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <span className="text-white text-xs font-medium">คลิกเพื่อขยาย</span>
-              </div>
               <Button
                 size="icon"
                 variant="destructive"
-                className="absolute top-0 right-0 h-6 w-6"
+                className="absolute -top-1 -right-1 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
                   updateTimeframe(tf, "imageUrl", "");
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-2 w-2" />
               </Button>
             </div>
           ) : (
-            <>
-              <Image className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-xs text-muted-foreground">ลากรูปมาวาง หรือคลิกแล้ว Ctrl+V</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 gap-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-              >
-                <Upload className="h-4 w-4" />
-                อัพโหลดรูป
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 gap-1 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+            >
+              <Upload className="h-3 w-3" />
+              <span className="hidden sm:inline">รูป</span>
+            </Button>
           )}
         </div>
         <input
@@ -1154,16 +1137,24 @@ export default function ChartAnalysis() {
 
           <TabsContent value="morning" className="space-y-6">
             <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>เช็ค Sig ทุก TF (07:00 น.)</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">เช็ค Sig / วงจรกราฟ (07:00 น.)</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                  <TimeframeCard label="MN (Monthly)" tf="mn" />
-                  <TimeframeCard label="W (Weekly)" tf="w" />
-                  <TimeframeCard label="D (Daily)" tf="d" />
-                  <TimeframeCard label="H4" tf="h4" />
-                  <TimeframeCard label="H1" tf="h1" />
+              <CardContent className="p-0">
+                {/* Table Header */}
+                <div className="grid grid-cols-[60px_100px_1fr_auto] sm:grid-cols-[80px_110px_1fr_auto] gap-2 items-center py-2 px-2 bg-muted/50 border-b border-border/50 text-xs font-medium text-muted-foreground">
+                  <span>TF</span>
+                  <span>Signal</span>
+                  <span>บันทึกไส้ใน</span>
+                  <span>Chart</span>
+                </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-border/30">
+                  <TimeframeRow label="MN" tf="mn" />
+                  <TimeframeRow label="W" tf="w" />
+                  <TimeframeRow label="D" tf="d" />
+                  <TimeframeRow label="H4" tf="h4" />
+                  <TimeframeRow label="H1" tf="h1" />
                 </div>
               </CardContent>
             </Card>

@@ -490,35 +490,113 @@ export default function ChartAnalysis() {
       doc.text(`วันที่ ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
       yPos += lineHeight + 6;
 
-      // ========== TF CHECK TABLE ==========
+      // ========== TF CHECK TABLE (Horizontal Table Layout) ==========
       // Section header
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(headerFontSize);
       doc.text("เช็ค Sig / วงจรกราฟของทุก TF (07.00น.)", margin, yPos);
-      yPos += lineHeight + 3;
+      yPos += lineHeight + 5;
 
       // TF data array
       const timeframes = [
-        { name: "MN", signal: log.mn_signal || "", structure: log.mn_market_structure || "" },
-        { name: "Week", signal: log.w_signal || "", structure: log.w_market_structure || "" },
-        { name: "Day", signal: log.d_signal || "", structure: log.d_market_structure || "" },
-        { name: "H4", signal: log.h4_signal || "", structure: log.h4_market_structure || "" },
-        { name: "H1", signal: log.h1_signal || "", structure: log.h1_market_structure || "" },
+        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", hasImage: !!log.mn_image_url },
+        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", hasImage: !!log.w_image_url },
+        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", hasImage: !!log.d_image_url },
+        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", hasImage: !!log.h4_image_url },
+        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", hasImage: !!log.h1_image_url },
       ];
 
-      doc.setFont("Sarabun", "normal");
-      doc.setFontSize(baseFontSize);
+      // Table column widths
+      const colWidths = {
+        tf: 18,
+        signal: 25,
+        details: contentWidth - 18 - 25 - 25,
+        chart: 25,
+      };
 
-      for (const tf of timeframes) {
-        const signalText = tf.signal || "___";
-        const structureText = tf.structure || "___";
-        const tfLine = `${tf.name.padEnd(6)} Sig ${signalText} ไล้หลัง Sig ${structureText}`;
-        doc.text(tfLine, margin + 5, yPos);
+      // Draw table header
+      doc.setFillColor(40, 60, 45); // Dark green header
+      doc.rect(margin, yPos, contentWidth, lineHeight + 4, "F");
+      
+      doc.setFont("Sarabun", "bold");
+      doc.setFontSize(smallFontSize);
+      doc.setTextColor(255, 255, 255);
+      
+      let xPos = margin + 3;
+      doc.text("TF", xPos, yPos + lineHeight);
+      xPos += colWidths.tf;
+      doc.text("Signal", xPos, yPos + lineHeight);
+      xPos += colWidths.signal;
+      doc.text("Details (บันทึกไส้ใน)", xPos, yPos + lineHeight);
+      xPos += colWidths.details;
+      doc.text("Chart", xPos, yPos + lineHeight);
+      
+      yPos += lineHeight + 6;
+      doc.setTextColor(0, 0, 0);
+
+      // Draw table rows
+      doc.setFont("Sarabun", "normal");
+      doc.setFontSize(smallFontSize);
+
+      for (let i = 0; i < timeframes.length; i++) {
+        const tf = timeframes[i];
+        const rowHeight = lineHeight + 6;
         
-        // Draw dotted line to fill the rest
-        const textWidth = doc.getTextWidth(tfLine);
-        drawDottedLine(yPos, margin + 5 + textWidth + 5);
-        yPos += lineHeight + 2;
+        // Alternate row background
+        if (i % 2 === 0) {
+          doc.setFillColor(245, 245, 245);
+          doc.rect(margin, yPos - 2, contentWidth, rowHeight, "F");
+        }
+        
+        // Draw row border
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(margin, yPos - 2, contentWidth, rowHeight, "S");
+        
+        // Draw column separators
+        let colX = margin + colWidths.tf;
+        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        colX += colWidths.signal;
+        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        colX += colWidths.details;
+        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        
+        // Draw cell content
+        xPos = margin + 3;
+        
+        // TF Name (bold)
+        doc.setFont("Sarabun", "bold");
+        doc.text(tf.name, xPos, yPos + lineHeight - 1);
+        xPos += colWidths.tf;
+        
+        // Signal with color indicator
+        doc.setFont("Sarabun", "normal");
+        if (tf.signal === "Buy") {
+          doc.setTextColor(16, 185, 129); // Emerald
+        } else if (tf.signal === "Sell") {
+          doc.setTextColor(220, 38, 38); // Red
+        } else {
+          doc.setTextColor(100, 100, 100); // Gray
+        }
+        doc.text(tf.signal, xPos, yPos + lineHeight - 1);
+        doc.setTextColor(0, 0, 0);
+        xPos += colWidths.signal;
+        
+        // Details (truncate if too long)
+        const maxDetailsWidth = colWidths.details - 6;
+        let detailsText = tf.structure;
+        while (doc.getTextWidth(detailsText) > maxDetailsWidth && detailsText.length > 0) {
+          detailsText = detailsText.slice(0, -1);
+        }
+        if (detailsText !== tf.structure && detailsText.length > 3) {
+          detailsText = detailsText.slice(0, -3) + "...";
+        }
+        doc.text(detailsText, xPos, yPos + lineHeight - 1);
+        xPos += colWidths.details;
+        
+        // Chart indicator
+        doc.text(tf.hasImage ? "📷" : "-", xPos + 8, yPos + lineHeight - 1);
+        
+        yPos += rowHeight;
       }
 
       yPos += 4;

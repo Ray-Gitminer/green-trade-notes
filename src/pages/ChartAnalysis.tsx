@@ -429,6 +429,16 @@ export default function ChartAnalysis() {
       return yPos;
     };
 
+    // Load logo once for all pages
+    let logoData: string | null = null;
+    try {
+      const logoModule = await import("@/assets/logo-report.png");
+      const logoUrl = logoModule.default;
+      logoData = await loadImageAsBase64(logoUrl);
+    } catch {
+      console.log("Logo not found, continuing without logo");
+    }
+
     for (let logIndex = 0; logIndex < data.length; logIndex++) {
       const log = data[logIndex];
       if (logIndex > 0) doc.addPage();
@@ -436,18 +446,29 @@ export default function ChartAnalysis() {
       let yPos = margin;
 
       // ========== HEADER SECTION ==========
-      // Title: "บันทึกการเดินทางของกราฟ"
+      // Logo in top-left corner
+      const logoSize = 18;
+      if (logoData) {
+        try {
+          doc.addImage(logoData, "PNG", margin, yPos - 3, logoSize, logoSize);
+        } catch {
+          console.log("Failed to add logo to PDF");
+        }
+      }
+
+      // Title: "บันทึกการเดินทางของกราฟ" (offset to right of logo)
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(titleFontSize);
       doc.setTextColor(0, 0, 0);
-      doc.text("บันทึกการเดินทางของกราฟ", pageWidth / 2, yPos, { align: "center" });
-      yPos += lineHeight + 2;
-
-      // Date
+      const titleX = logoData ? margin + logoSize + 4 : margin;
+      doc.text("บันทึกการเดินทางของกราฟ", titleX, yPos + 4);
+      
+      // Date (below title)
       doc.setFont("Sarabun", "normal");
       doc.setFontSize(baseFontSize);
-      doc.text(`วันที่ ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
-      yPos += lineHeight + 6;
+      doc.text(`วันที่ ${log.log_date}`, titleX, yPos + 4 + lineHeight + 2);
+      
+      yPos += logoSize + 4;
 
       // ========== TF CHECK TABLE (Horizontal Table Layout with Thumbnails) ==========
       // Section header

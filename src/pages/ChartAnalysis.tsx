@@ -1408,12 +1408,12 @@ export default function ChartAnalysis() {
         </DialogContent>
       </Dialog>
 
-      {/* PDF Preview Dialog - In-App Modal */}
+      {/* PDF Preview Dialog - In-App Modal with Fixed Width for iPad/Mobile */}
       <Dialog open={pdfPreviewOpen} onOpenChange={closePdfPreview}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 flex flex-col">
-          <DialogHeader className="p-4 pb-2 border-b">
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="p-4 pb-2 border-b shrink-0 bg-white text-gray-900">
             <DialogTitle className="flex items-center justify-between">
-              <span className="text-lg font-bold">📄 ตัวอย่าง PDF</span>
+              <span className="text-lg font-bold text-gray-900">📄 ตัวอย่าง PDF</span>
               <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
                 <Download className="h-5 w-5" />
                 <span className="hidden sm:inline">ดาวน์โหลด PDF</span>
@@ -1421,29 +1421,33 @@ export default function ChartAnalysis() {
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 p-4 pt-2 min-h-0 overflow-hidden">
-            {pdfPreviewUrl ? (
-              <object
-                data={pdfPreviewUrl}
-                type="application/pdf"
-                className="w-full h-full rounded-lg border"
-              >
-                {/* Fallback for browsers that don't support object PDF */}
-                <div className="flex flex-col items-center justify-center h-full bg-muted/30 rounded-lg border">
-                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                  <p className="text-lg font-medium mb-2">เบราว์เซอร์ไม่รองรับการแสดง PDF</p>
-                  <p className="text-muted-foreground mb-4">กรุณาดาวน์โหลดไฟล์เพื่อดู</p>
-                  <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
-                    <Download className="h-5 w-5" />
-                    ดาวน์โหลด PDF
-                  </Button>
+          {/* Scrollable container with fixed minimum width - prevents responsive squeezing */}
+          <div className="flex-1 min-h-0 overflow-auto bg-white">
+            <div className="min-w-[1000px] h-full p-4">
+              {pdfPreviewUrl ? (
+                <object
+                  data={pdfPreviewUrl}
+                  type="application/pdf"
+                  className="w-full h-full rounded-lg border border-gray-300 bg-white"
+                  style={{ minHeight: '100%' }}
+                >
+                  {/* Fallback for browsers that don't support object PDF */}
+                  <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-300 py-16">
+                    <FileText className="h-16 w-16 text-gray-400 mb-4" />
+                    <p className="text-lg font-medium mb-2 text-gray-900">เบราว์เซอร์ไม่รองรับการแสดง PDF</p>
+                    <p className="text-gray-500 mb-4">กรุณาดาวน์โหลดไฟล์เพื่อดู</p>
+                    <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
+                      <Download className="h-5 w-5" />
+                      ดาวน์โหลด PDF
+                    </Button>
+                  </div>
+                </object>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
                 </div>
-              </object>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

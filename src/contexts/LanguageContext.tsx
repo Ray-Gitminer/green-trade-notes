@@ -90,7 +90,7 @@ const translations: Translations = {
   "journal.allTrades": { th: "ทั้งหมด", en: "All Trades" },
   "journal.liveOnly": { th: "Live เท่านั้น", en: "Live Only" },
   "journal.paperOnly": { th: "Paper เท่านั้น", en: "Paper Only" },
-  "journal.exportCSV": { th: "ส่งออก CSV", en: "Export CSV" },
+  
   "journal.date": { th: "วันที่", en: "Date" },
   "journal.type": { th: "ประเภท", en: "Type" },
   "journal.entry": { th: "ราคาเข้า", en: "Entry" },

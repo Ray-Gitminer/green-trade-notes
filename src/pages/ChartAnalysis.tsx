@@ -22,7 +22,6 @@ import {
   X,
   Download,
   Share2,
-  FileSpreadsheet,
   FileText,
   Clock,
   TrendingUp,
@@ -361,46 +360,6 @@ export default function ChartAnalysis() {
     return data || [];
   };
 
-  const exportToCSV = async () => {
-    const data = await fetchLogsForExport(exportStartDate, exportEndDate);
-    if (!data.length) {
-      toast({ title: "ไม่มีข้อมูล", description: "ไม่พบข้อมูลในช่วงวันที่เลือก", variant: "destructive" });
-      return;
-    }
-
-    const headers = [
-      "วันที่", "MN Signal", "MN Structure", "W Signal", "W Structure", 
-      "D Signal", "D Structure", "H4 Signal", "H4 Structure", "H1 Signal", "H1 Structure",
-      "แนวต้านหลัก", "รับ-ต้านย่อย", "รับหลัก"
-    ];
-    
-    const rows = data.map(log => [
-      log.log_date,
-      log.mn_signal || "",
-      log.mn_market_structure || "",
-      log.w_signal || "",
-      log.w_market_structure || "",
-      log.d_signal || "",
-      log.d_market_structure || "",
-      log.h4_signal || "",
-      log.h4_market_structure || "",
-      log.h1_signal || "",
-      log.h1_market_structure || "",
-      log.main_resistance || "",
-      log.minor_sr || "",
-      log.main_support || ""
-    ]);
-
-    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.csv`;
-    link.click();
-    setExportDialogOpen(false);
-    toast({ title: "ส่งออกสำเร็จ" });
-  };
 
   // Helper function to load image and convert to base64
   const loadImageAsBase64 = (url: string): Promise<string | null> => {
@@ -1251,10 +1210,6 @@ export default function ChartAnalysis() {
                 </div>
                 
                 <div className="flex flex-col gap-2">
-                  <Button onClick={exportToCSV} className="gap-2">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    ส่งออก CSV (Excel/Google Sheets)
-                  </Button>
                   <Button onClick={previewPDF} variant="secondary" className="gap-2" disabled={generatingPreview}>
                     {generatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                     ดูตัวอย่าง PDF

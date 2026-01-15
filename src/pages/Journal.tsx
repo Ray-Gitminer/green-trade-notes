@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { BookOpen, Download, Filter } from "lucide-react";
+import { BookOpen, Filter } from "lucide-react";
 
 export default function Journal() {
   const { user } = useAuth();
@@ -29,17 +29,6 @@ export default function Journal() {
     setLoading(false);
   };
 
-  const exportCSV = () => {
-    const headers = ["Date", "Pair", "Type", "Entry", "SL", "TP", "P/L", "Status"];
-    const rows = trades.map(t => [format(new Date(t.trade_date), "yyyy-MM-dd"), t.pair, t.trade_type, t.entry_price, t.stop_loss, t.take_profit, t.profit_loss || 0, t.status]);
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "trades.csv";
-    a.click();
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -57,7 +46,6 @@ export default function Journal() {
               <SelectItem value="paper">{t("journal.paperOnly")}</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />{t("journal.exportCSV")}</Button>
         </div>
       </div>
 

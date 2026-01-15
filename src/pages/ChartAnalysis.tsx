@@ -95,6 +95,9 @@ export default function ChartAnalysis() {
   const [exportEndDate, setExportEndDate] = useState<Date>(new Date());
   const [pdfFontSize, setPdfFontSize] = useState<number>(14);
   const [logs, setLogs] = useState<LogData[]>([]);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   const [autoPasteOpen, setAutoPasteOpen] = useState(false);
   const [autoPasteTf, setAutoPasteTf] = useState<keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">>("mn");
@@ -424,14 +427,13 @@ export default function ChartAnalysis() {
     });
   };
 
-  const exportToPDF = async () => {
+  // Generate PDF document (reusable for preview and download)
+  const generatePDFDocument = async () => {
     const data = await fetchLogsForExport(exportStartDate, exportEndDate);
     if (!data.length) {
       toast({ title: "ไม่มีข้อมูล", description: "ไม่พบข้อมูลในช่วงวันที่เลือก", variant: "destructive" });
-      return;
+      return null;
     }
-
-    toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     
@@ -669,9 +671,56 @@ export default function ChartAnalysis() {
       }
     }
 
-    doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
-    setExportDialogOpen(false);
-    toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
+    return doc;
+  };
+
+  // Preview PDF before download
+  const previewPDF = async () => {
+    setGeneratingPreview(true);
+    try {
+      const doc = await generatePDFDocument();
+      if (doc) {
+        const pdfBlob = doc.output("blob");
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        setPdfPreviewUrl(blobUrl);
+        setPdfPreviewOpen(true);
+      }
+    } catch (error) {
+      console.error("Error generating PDF preview:", error);
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถสร้าง Preview ได้", variant: "destructive" });
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
+  // Download PDF directly
+  const exportToPDF = async () => {
+    toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
+    try {
+      const doc = await generatePDFDocument();
+      if (doc) {
+        doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
+        setExportDialogOpen(false);
+        setPdfPreviewOpen(false);
+        if (pdfPreviewUrl) {
+          URL.revokeObjectURL(pdfPreviewUrl);
+          setPdfPreviewUrl(null);
+        }
+        toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
+      }
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถส่งออก PDF ได้", variant: "destructive" });
+    }
+  };
+
+  // Cleanup preview URL on close
+  const closePdfPreview = () => {
+    setPdfPreviewOpen(false);
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
   };
 
   // Update timeframe data
@@ -1013,9 +1062,13 @@ export default function ChartAnalysis() {
                     <FileSpreadsheet className="h-4 w-4" />
                     ส่งออก CSV (Excel/Google Sheets)
                   </Button>
+                  <Button onClick={previewPDF} variant="secondary" className="gap-2" disabled={generatingPreview}>
+                    {generatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    ดูตัวอย่าง PDF
+                  </Button>
                   <Button onClick={exportToPDF} variant="outline" className="gap-2">
                     <File className="h-4 w-4" />
-                    ส่งออก PDF (แบบสมุด)
+                    ดาวน์โหลด PDF (แบบสมุด)
                   </Button>
                 </div>
               </div>
@@ -1113,6 +1166,32 @@ export default function ChartAnalysis() {
                 src={lightboxUrl}
                 alt="Preview"
                 className="max-w-full max-h-[85vh] object-contain rounded"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={pdfPreviewOpen} onOpenChange={closePdfPreview}>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>ตัวอย่าง PDF</span>
+              <div className="flex gap-2">
+                <Button onClick={exportToPDF} size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  ดาวน์โหลด PDF
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 h-full min-h-0">
+            {pdfPreviewUrl && (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-[calc(90vh-100px)] border rounded-lg"
+                title="PDF Preview"
               />
             )}
           </div>

@@ -490,99 +490,111 @@ export default function ChartAnalysis() {
       doc.text(`วันที่ ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
       yPos += lineHeight + 6;
 
-      // ========== TF CHECK TABLE (Horizontal Table Layout) ==========
+      // ========== TF CHECK TABLE (Horizontal Table Layout with Thumbnails) ==========
       // Section header
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(headerFontSize);
       doc.text("เช็ค Sig / วงจรกราฟของทุก TF (07.00น.)", margin, yPos);
-      yPos += lineHeight + 5;
+      yPos += lineHeight + 3;
 
-      // TF data array
+      // TF data array with image URLs
       const timeframes = [
-        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", hasImage: !!log.mn_image_url },
-        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", hasImage: !!log.w_image_url },
-        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", hasImage: !!log.d_image_url },
-        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", hasImage: !!log.h4_image_url },
-        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", hasImage: !!log.h1_image_url },
+        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", imageUrl: log.mn_image_url },
+        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", imageUrl: log.w_image_url },
+        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", imageUrl: log.d_image_url },
+        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", imageUrl: log.h4_image_url },
+        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", imageUrl: log.h1_image_url },
       ];
 
-      // Table column widths
+      // Table column widths (adjusted for thumbnail)
       const colWidths = {
-        tf: 18,
-        signal: 25,
-        details: contentWidth - 18 - 25 - 25,
-        chart: 25,
+        tf: 16,
+        signal: 22,
+        details: contentWidth - 16 - 22 - 30,
+        chart: 30,
       };
+
+      // Row height with thumbnail
+      const thumbHeight = 12;
+      const rowHeight = thumbHeight + 4;
 
       // Draw table header
       doc.setFillColor(40, 60, 45); // Dark green header
-      doc.rect(margin, yPos, contentWidth, lineHeight + 4, "F");
+      doc.rect(margin, yPos, contentWidth, lineHeight + 2, "F");
       
       doc.setFont("Sarabun", "bold");
-      doc.setFontSize(smallFontSize);
+      doc.setFontSize(smallFontSize - 1);
       doc.setTextColor(255, 255, 255);
       
-      let xPos = margin + 3;
-      doc.text("TF", xPos, yPos + lineHeight);
+      let xPos = margin + 2;
+      doc.text("TF", xPos, yPos + lineHeight - 1);
       xPos += colWidths.tf;
-      doc.text("Signal", xPos, yPos + lineHeight);
+      doc.text("Sig", xPos, yPos + lineHeight - 1);
       xPos += colWidths.signal;
-      doc.text("Details (บันทึกไส้ใน)", xPos, yPos + lineHeight);
+      doc.text("Details", xPos, yPos + lineHeight - 1);
       xPos += colWidths.details;
-      doc.text("Chart", xPos, yPos + lineHeight);
+      doc.text("Chart", xPos, yPos + lineHeight - 1);
       
-      yPos += lineHeight + 6;
+      yPos += lineHeight + 3;
       doc.setTextColor(0, 0, 0);
 
-      // Draw table rows
+      // Pre-load all TF images for thumbnails
+      const tfImages: { [key: string]: string | null } = {};
+      for (const tf of timeframes) {
+        if (tf.imageUrl) {
+          tfImages[tf.name] = await loadImageAsBase64(tf.imageUrl);
+        }
+      }
+
+      // Draw table rows with thumbnails
       doc.setFont("Sarabun", "normal");
-      doc.setFontSize(smallFontSize);
+      doc.setFontSize(smallFontSize - 1);
 
       for (let i = 0; i < timeframes.length; i++) {
         const tf = timeframes[i];
-        const rowHeight = lineHeight + 6;
         
         // Alternate row background
         if (i % 2 === 0) {
-          doc.setFillColor(245, 245, 245);
-          doc.rect(margin, yPos - 2, contentWidth, rowHeight, "F");
+          doc.setFillColor(248, 248, 248);
+          doc.rect(margin, yPos, contentWidth, rowHeight, "F");
         }
         
         // Draw row border
         doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, yPos - 2, contentWidth, rowHeight, "S");
+        doc.rect(margin, yPos, contentWidth, rowHeight, "S");
         
         // Draw column separators
         let colX = margin + colWidths.tf;
-        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        doc.line(colX, yPos, colX, yPos + rowHeight);
         colX += colWidths.signal;
-        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        doc.line(colX, yPos, colX, yPos + rowHeight);
         colX += colWidths.details;
-        doc.line(colX, yPos - 2, colX, yPos - 2 + rowHeight);
+        doc.line(colX, yPos, colX, yPos + rowHeight);
         
         // Draw cell content
-        xPos = margin + 3;
+        xPos = margin + 2;
+        const textY = yPos + rowHeight / 2 + 1.5;
         
         // TF Name (bold)
         doc.setFont("Sarabun", "bold");
-        doc.text(tf.name, xPos, yPos + lineHeight - 1);
+        doc.text(tf.name, xPos, textY);
         xPos += colWidths.tf;
         
         // Signal with color indicator
         doc.setFont("Sarabun", "normal");
         if (tf.signal === "Buy") {
-          doc.setTextColor(16, 185, 129); // Emerald
+          doc.setTextColor(16, 185, 129);
         } else if (tf.signal === "Sell") {
-          doc.setTextColor(220, 38, 38); // Red
+          doc.setTextColor(220, 38, 38);
         } else {
-          doc.setTextColor(100, 100, 100); // Gray
+          doc.setTextColor(100, 100, 100);
         }
-        doc.text(tf.signal, xPos, yPos + lineHeight - 1);
+        doc.text(tf.signal, xPos, textY);
         doc.setTextColor(0, 0, 0);
         xPos += colWidths.signal;
         
         // Details (truncate if too long)
-        const maxDetailsWidth = colWidths.details - 6;
+        const maxDetailsWidth = colWidths.details - 4;
         let detailsText = tf.structure;
         while (doc.getTextWidth(detailsText) > maxDetailsWidth && detailsText.length > 0) {
           detailsText = detailsText.slice(0, -1);
@@ -590,104 +602,96 @@ export default function ChartAnalysis() {
         if (detailsText !== tf.structure && detailsText.length > 3) {
           detailsText = detailsText.slice(0, -3) + "...";
         }
-        doc.text(detailsText, xPos, yPos + lineHeight - 1);
+        doc.text(detailsText, xPos, textY);
         xPos += colWidths.details;
         
-        // Chart indicator
-        doc.text(tf.hasImage ? "📷" : "-", xPos + 8, yPos + lineHeight - 1);
+        // Chart thumbnail image
+        const imgData = tfImages[tf.name];
+        if (imgData) {
+          try {
+            const thumbWidth = colWidths.chart - 4;
+            const imgX = xPos + 2;
+            const imgY = yPos + 1;
+            doc.addImage(imgData, "JPEG", imgX, imgY, thumbWidth, thumbHeight - 2);
+          } catch {
+            doc.text("📷", xPos + 10, textY);
+          }
+        } else {
+          doc.text("-", xPos + 12, textY);
+        }
         
         yPos += rowHeight;
       }
 
-      yPos += 4;
+      yPos += 2;
 
-      // ========== SUPPORT/RESISTANCE SECTION ==========
+      // ========== SUPPORT/RESISTANCE SECTION (Compact) ==========
       doc.setFont("Sarabun", "bold");
-      doc.setFontSize(headerFontSize);
-      doc.text("กรอบวัน :", margin, yPos);
-      yPos += lineHeight + 3;
-
+      doc.setFontSize(smallFontSize);
+      doc.text("กรอบวัน:", margin, yPos);
+      
+      // Inline S/R display for compactness
       doc.setFont("Sarabun", "normal");
-      doc.setFontSize(baseFontSize);
+      const srLine = `ต้านหลัก: ${log.main_resistance || "-"}  |  รับ-ต้านย่อย: ${log.minor_sr || "-"}  |  รับหลัก: ${log.main_support || "-"}`;
+      doc.text(srLine, margin + 22, yPos);
+      yPos += lineHeight + 4;
 
-      // Main Resistance
-      const resistanceText = log.main_resistance || "________________";
-      doc.text(`ต้านหลัก: ${resistanceText}`, margin + 20, yPos);
-      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`ต้านหลัก: ${resistanceText}`) + 5);
-      yPos += lineHeight + 2;
-
-      // Minor S/R
-      const minorSrText = log.minor_sr || "________________";
-      doc.text(`รับ-ต้าน ย่อย: ${minorSrText}`, margin + 20, yPos);
-      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`รับ-ต้าน ย่อย: ${minorSrText}`) + 5);
-      yPos += lineHeight + 2;
-
-      // Main Support
-      const supportText = log.main_support || "________________";
-      doc.text(`รับหลัก: ${supportText}`, margin + 20, yPos);
-      drawDottedLine(yPos, margin + 20 + doc.getTextWidth(`รับหลัก: ${supportText}`) + 5);
-      yPos += lineHeight + 8;
-
-      // ========== SESSIONS SECTION ==========
+      // ========== SESSIONS SECTION (Compact) ==========
       const sessions = log.chart_analysis_sessions || [];
       const sessionTimes = ["07:00", "11:00", "15:00", "19:00"];
 
       for (const sessionTime of sessionTimes) {
-        yPos = checkPageBreak(yPos, 40);
-
         const session = sessions.find((s: { session_time: string }) => s.session_time === sessionTime);
-
-        // Session header
-        doc.setFont("Sarabun", "bold");
-        doc.setFontSize(headerFontSize);
-        doc.text(`${sessionTime.replace(":", ".")} น. H1 / H4`, margin, yPos);
         
-        // "ราคากราฟ:" label
-        doc.setFont("Sarabun", "normal");
-        doc.setFontSize(baseFontSize);
-        doc.text("ราคากราฟ:", margin + 50, yPos);
-        yPos += lineHeight + 3;
+        // Skip empty sessions to save space
+        const hasContent = session?.h4_analysis || session?.h1_analysis || session?.chart_notes;
+        if (!hasContent) continue;
 
-        // Notes lines (H4 Analysis, H1 Analysis, Chart Notes)
+        yPos = checkPageBreak(yPos, 20);
+
+        // Session header (compact)
+        doc.setFont("Sarabun", "bold");
+        doc.setFontSize(smallFontSize);
+        doc.text(`${sessionTime.replace(":", ".")}น.`, margin, yPos);
+        yPos += lineHeight;
+
+        // Notes lines (compact - single line each)
+        doc.setFont("Sarabun", "normal");
+        doc.setFontSize(smallFontSize - 1);
+
         const noteContents = [
           { label: "H4:", text: session?.h4_analysis || "" },
           { label: "H1:", text: session?.h1_analysis || "" },
           { label: "โน้ต:", text: session?.chart_notes || "" },
         ];
 
-        doc.setFont("Sarabun", "normal");
-        doc.setFontSize(smallFontSize);
-
         for (const note of noteContents) {
           if (note.text) {
-            // Print label
             doc.setFont("Sarabun", "bold");
-            doc.text(note.label, margin + 5, yPos);
+            doc.text(note.label, margin + 3, yPos);
             doc.setFont("Sarabun", "normal");
             
-            // Split long text into multiple lines using jsPDF's splitTextToSize
             const labelWidth = doc.getTextWidth(note.label + " ");
-            const maxTextWidth = contentWidth - 10 - labelWidth;
-            const wrappedLines = doc.splitTextToSize(note.text, maxTextWidth);
+            const maxTextWidth = contentWidth - 8 - labelWidth;
             
-            // Print first line after label
-            if (wrappedLines.length > 0) {
-              doc.text(wrappedLines[0], margin + 5 + labelWidth, yPos);
+            // Truncate to fit single line for compactness
+            let displayText = note.text;
+            while (doc.getTextWidth(displayText) > maxTextWidth && displayText.length > 0) {
+              displayText = displayText.slice(0, -1);
             }
-            yPos += lineHeight + 1;
+            if (displayText !== note.text && displayText.length > 3) {
+              displayText = displayText.slice(0, -3) + "...";
+            }
             
-            // Print remaining lines
-            for (let lineIdx = 1; lineIdx < wrappedLines.length; lineIdx++) {
-              yPos = checkPageBreak(yPos, lineHeight + 2);
-              doc.text(wrappedLines[lineIdx], margin + 10, yPos);
-              yPos += lineHeight + 1;
-            }
+            doc.text(displayText, margin + 3 + labelWidth, yPos);
+            yPos += lineHeight - 1;
           }
         }
 
-        // Add some spacing after notes
-        drawDottedLine(yPos);
-        yPos += lineHeight + 6;
+        // Thin separator line
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 3;
       }
 
       // ========== IMAGES PAGE ==========
@@ -961,6 +965,43 @@ export default function ChartAnalysis() {
   }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dropZoneRef = useRef<HTMLDivElement>(null);
+    const [pasting, setPasting] = useState(false);
+
+    // Quick Paste from Clipboard function
+    const handleQuickPaste = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setPasting(true);
+      
+      try {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            // Convert blob to file for upload
+            const url = await uploadImage(blob as File, "charts");
+            updateTimeframe(tf, "imageUrl", url);
+            toast({ title: "วางรูปจาก Clipboard สำเร็จ" });
+            return;
+          }
+        }
+        toast({ 
+          title: "ไม่พบรูปในคลิปบอร์ด", 
+          description: "ให้คัดลอกรูปจาก TradingView ก่อน (Ctrl+C)", 
+          variant: "destructive" 
+        });
+      } catch (error) {
+        // Fallback: prompt user to press Ctrl+V
+        toast({ 
+          title: "ใช้ Ctrl+V แทน", 
+          description: "คลิกที่ช่องแล้วกด Ctrl+V เพื่อวางรูป" 
+        });
+        setPasteTarget("charts", (url) => updateTimeframe(tf, "imageUrl", url));
+        dropZoneRef.current?.focus();
+      } finally {
+        setPasting(false);
+      }
+    };
     
     return (
       <div className="grid grid-cols-[60px_100px_1fr_auto] sm:grid-cols-[80px_110px_1fr_auto] gap-2 items-center py-3 px-2 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors">
@@ -993,7 +1034,7 @@ export default function ChartAnalysis() {
           onChange={(next) => updateTimeframe(tf, "marketStructure", next)}
         />
 
-        {/* Image Upload */}
+        {/* Image Upload with Quick Paste */}
         <div
           ref={dropZoneRef}
           tabIndex={0}
@@ -1045,19 +1086,38 @@ export default function ChartAnalysis() {
               </Button>
             </div>
           ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 gap-1 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
-            >
-              <Upload className="h-3 w-3" />
-              <span className="hidden sm:inline">รูป</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              {/* Quick Paste Button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={handleQuickPaste}
+                disabled={pasting}
+                title="วางรูปจาก Clipboard (Ctrl+V)"
+              >
+                {pasting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardPaste className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                )}
+              </Button>
+              {/* File Upload Button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 gap-1 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                <Upload className="h-3 w-3" />
+                <span className="hidden sm:inline">รูป</span>
+              </Button>
+            </div>
           )}
         </div>
         <input

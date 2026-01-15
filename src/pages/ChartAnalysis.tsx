@@ -21,7 +21,6 @@ import {
   Upload,
   X,
   Download,
-  Share2,
   FileText,
   Clock,
   TrendingUp,
@@ -194,6 +193,103 @@ export default function ChartAnalysis() {
   useEffect(() => {
     preloadThaiFont();
   }, []);
+
+  // Auto-save every 30 seconds
+  const [lastSavedLog, setLastSavedLog] = useState<string>("");
+  
+  useEffect(() => {
+    const currentLogStr = JSON.stringify(currentLog);
+    
+    // Skip if nothing changed or still loading
+    if (!user || loading || currentLogStr === lastSavedLog) return;
+    
+    const autoSaveTimer = setInterval(async () => {
+      const latestLogStr = JSON.stringify(currentLog);
+      if (latestLogStr !== lastSavedLog) {
+        try {
+          const dateStr = format(currentLog.logDate, "yyyy-MM-dd");
+          
+          const logPayload = {
+            user_id: user.id,
+            log_date: dateStr,
+            mn_signal: currentLog.mn.signal,
+            mn_market_structure: currentLog.mn.marketStructure,
+            mn_image_url: currentLog.mn.imageUrl,
+            w_signal: currentLog.w.signal,
+            w_market_structure: currentLog.w.marketStructure,
+            w_image_url: currentLog.w.imageUrl,
+            d_signal: currentLog.d.signal,
+            d_market_structure: currentLog.d.marketStructure,
+            d_image_url: currentLog.d.imageUrl,
+            h4_signal: currentLog.h4.signal,
+            h4_market_structure: currentLog.h4.marketStructure,
+            h4_image_url: currentLog.h4.imageUrl,
+            h1_signal: currentLog.h1.signal,
+            h1_market_structure: currentLog.h1.marketStructure,
+            h1_image_url: currentLog.h1.imageUrl,
+            main_resistance: currentLog.mainResistance,
+            minor_sr: currentLog.minorSr,
+            main_support: currentLog.mainSupport
+          };
+
+          let logId = currentLog.id;
+          
+          if (logId) {
+            await supabase.from("chart_analysis_logs").update(logPayload).eq("id", logId);
+          } else {
+            const { data } = await supabase.from("chart_analysis_logs").insert(logPayload).select("id").single();
+            logId = data?.id;
+            if (logId) {
+              setCurrentLog(prev => ({ ...prev, id: logId }));
+            }
+          }
+
+          if (logId) {
+            for (const session of currentLog.sessions) {
+              const sessionPayload = {
+                user_id: user.id,
+                log_id: logId,
+                session_time: session.sessionTime,
+                h1_analysis: session.h1Analysis,
+                h4_analysis: session.h4Analysis,
+                chart_notes: session.chartNotes,
+                h1_image_url: session.h1ImageUrl,
+                h4_image_url: session.h4ImageUrl
+              };
+
+              if (session.id) {
+                await supabase.from("chart_analysis_sessions").update(sessionPayload).eq("id", session.id);
+              } else {
+                const { data } = await supabase.from("chart_analysis_sessions").insert(sessionPayload).select("id").single();
+                if (data?.id) {
+                  setCurrentLog(prev => ({
+                    ...prev,
+                    sessions: prev.sessions.map(s => 
+                      s.sessionTime === session.sessionTime ? { ...s, id: data.id } : s
+                    )
+                  }));
+                }
+              }
+            }
+          }
+          
+          setLastSavedLog(latestLogStr);
+          console.log("Auto-saved at", new Date().toLocaleTimeString());
+        } catch (error) {
+          console.error("Auto-save error:", error);
+        }
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(autoSaveTimer);
+  }, [user, loading, currentLog, lastSavedLog]);
+  
+  // Update lastSavedLog when data is fetched
+  useEffect(() => {
+    if (!loading && currentLog) {
+      setLastSavedLog(JSON.stringify(currentLog));
+    }
+  }, [loading]);
 
   // Upload image
   const uploadImage = async (file: File, folder: string): Promise<string> => {
@@ -810,53 +906,6 @@ export default function ChartAnalysis() {
     }
   };
 
-  // Share PDF via LINE or native share
-  const sharePDF = async () => {
-    if (!pdfPreviewUrl) return;
-    
-    try {
-      // Convert blob URL to actual blob
-      const response = await fetch(pdfPreviewUrl);
-      const pdfBlob = await response.blob();
-      const fileName = `chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`;
-      const file = new (window as any).File([pdfBlob], fileName, { type: "application/pdf" }) as File;
-      
-      // Check if Web Share API is supported with files
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "Chart Analysis Report",
-          text: `รายงานการวิเคราะห์กราฟ ${format(exportStartDate, "dd/MM/yyyy", { locale: th })} - ${format(exportEndDate, "dd/MM/yyyy", { locale: th })}`
-        });
-        toast({ title: "แชร์สำเร็จ", description: "ส่งไฟล์ PDF เรียบร้อยแล้ว" });
-      } else if (navigator.share) {
-        // Fallback: share without file (just text/link)
-        await navigator.share({
-          title: "Chart Analysis Report",
-          text: `รายงานการวิเคราะห์กราฟ ${format(exportStartDate, "dd/MM/yyyy", { locale: th })} - ${format(exportEndDate, "dd/MM/yyyy", { locale: th })}\n\nกรุณาดาวน์โหลด PDF จากแอป`
-        });
-        toast({ title: "แชร์สำเร็จ", description: "ส่งข้อความเรียบร้อยแล้ว" });
-      } else {
-        // Fallback for desktop: download and show message
-        downloadPDFFromPreview();
-        toast({ 
-          title: "ไม่รองรับการแชร์โดยตรง", 
-          description: "ดาวน์โหลดไฟล์แล้ว กรุณาแชร์ผ่าน LINE ด้วยตนเอง",
-          variant: "default"
-        });
-      }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error("Error sharing PDF:", error);
-        toast({ 
-          title: "เกิดข้อผิดพลาด", 
-          description: "ไม่สามารถแชร์ไฟล์ได้ กรุณาดาวน์โหลดและแชร์ด้วยตนเอง", 
-          variant: "destructive" 
-        });
-      }
-    }
-  };
-
   // Update timeframe data
   const updateTimeframe = (tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">, field: keyof TimeframeData, value: string) => {
     setCurrentLog(prev => ({
@@ -1119,6 +1168,15 @@ export default function ChartAnalysis() {
     );
   };
 
+  // Clear session notes
+  const clearSessionNotes = (index: number) => {
+    setCurrentLog(prev => ({
+      ...prev,
+      sessions: prev.sessions.map((s, i) => i === index ? { ...s, chartNotes: "" } : s)
+    }));
+    toast({ title: "ล้างบันทึกสำเร็จ" });
+  };
+
   // Session Card - extracted as a stable render function to avoid inline component re-creation
   const renderSessionCard = (session: SessionData, index: number) => {
     return (
@@ -1127,6 +1185,7 @@ export default function ChartAnalysis() {
         session={session}
         index={index}
         updateSession={updateSession}
+        clearSessionNotes={clearSessionNotes}
         setPasteTarget={setPasteTarget}
         uploadImage={uploadImage}
         handleFileUpload={handleFileUpload}
@@ -1355,18 +1414,11 @@ export default function ChartAnalysis() {
           <DialogHeader className="p-4 pb-2 border-b">
             <DialogTitle className="flex items-center justify-between">
               <span className="text-lg font-bold">📄 ตัวอย่าง PDF</span>
-              <div className="flex gap-2">
-                <Button onClick={sharePDF} size="lg" variant="outline" className="gap-2">
-                  <Share2 className="h-5 w-5" />
-                  <span className="hidden sm:inline">แชร์ไลน์</span>
-                  <span className="sm:hidden">แชร์</span>
-                </Button>
-                <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
-                  <Download className="h-5 w-5" />
-                  <span className="hidden sm:inline">ดาวน์โหลด PDF</span>
-                  <span className="sm:hidden">โหลด</span>
-                </Button>
-              </div>
+              <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
+                <Download className="h-5 w-5" />
+                <span className="hidden sm:inline">ดาวน์โหลด PDF</span>
+                <span className="sm:hidden">โหลด</span>
+              </Button>
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 p-4 pt-2 min-h-0 overflow-hidden">

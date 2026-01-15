@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Upload, X } from "lucide-react";
+import { Clock, Upload, X, Eraser } from "lucide-react";
 
 interface SessionData {
   id?: string;
@@ -19,6 +19,7 @@ interface SessionCardContentProps {
   session: SessionData;
   index: number;
   updateSession: (index: number, field: keyof SessionData, value: string) => void;
+  clearSessionNotes: (index: number) => void;
   setPasteTarget: (folder: string, updateFn: (url: string) => void) => void;
   uploadImage: (file: File, folder: string) => Promise<string>;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, updateFn: (url: string) => void) => void;
@@ -30,6 +31,7 @@ const SessionCardContent = memo(function SessionCardContent({
   session,
   index,
   updateSession,
+  clearSessionNotes,
   setPasteTarget,
   uploadImage,
   handleFileUpload,
@@ -44,9 +46,23 @@ const SessionCardContent = memo(function SessionCardContent({
   return (
     <Card className="glass-card">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          {session.sessionTime} น. H1 / H4
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            {session.sessionTime} น. H1 / H4
+          </div>
+          {session.chartNotes && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-destructive"
+              onClick={() => clearSessionNotes(index)}
+            >
+              <Eraser className="h-4 w-4" />
+              <span className="hidden sm:inline">ล้างบันทึก</span>
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

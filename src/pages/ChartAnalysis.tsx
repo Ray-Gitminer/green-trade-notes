@@ -21,6 +21,7 @@ import {
   Upload,
   X,
   Download,
+  Share2,
   FileSpreadsheet,
   FileText,
   Clock,
@@ -739,6 +740,53 @@ export default function ChartAnalysis() {
     }
   };
 
+  // Share PDF via LINE or native share
+  const sharePDF = async () => {
+    if (!pdfPreviewUrl) return;
+    
+    try {
+      // Convert blob URL to actual blob
+      const response = await fetch(pdfPreviewUrl);
+      const pdfBlob = await response.blob();
+      const fileName = `chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`;
+      const file = new (window as any).File([pdfBlob], fileName, { type: "application/pdf" }) as File;
+      
+      // Check if Web Share API is supported with files
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Chart Analysis Report",
+          text: `รายงานการวิเคราะห์กราฟ ${format(exportStartDate, "dd/MM/yyyy", { locale: th })} - ${format(exportEndDate, "dd/MM/yyyy", { locale: th })}`
+        });
+        toast({ title: "แชร์สำเร็จ", description: "ส่งไฟล์ PDF เรียบร้อยแล้ว" });
+      } else if (navigator.share) {
+        // Fallback: share without file (just text/link)
+        await navigator.share({
+          title: "Chart Analysis Report",
+          text: `รายงานการวิเคราะห์กราฟ ${format(exportStartDate, "dd/MM/yyyy", { locale: th })} - ${format(exportEndDate, "dd/MM/yyyy", { locale: th })}\n\nกรุณาดาวน์โหลด PDF จากแอป`
+        });
+        toast({ title: "แชร์สำเร็จ", description: "ส่งข้อความเรียบร้อยแล้ว" });
+      } else {
+        // Fallback for desktop: download and show message
+        downloadPDFFromPreview();
+        toast({ 
+          title: "ไม่รองรับการแชร์โดยตรง", 
+          description: "ดาวน์โหลดไฟล์แล้ว กรุณาแชร์ผ่าน LINE ด้วยตนเอง",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error("Error sharing PDF:", error);
+        toast({ 
+          title: "เกิดข้อผิดพลาด", 
+          description: "ไม่สามารถแชร์ไฟล์ได้ กรุณาดาวน์โหลดและแชร์ด้วยตนเอง", 
+          variant: "destructive" 
+        });
+      }
+    }
+  };
+
   // Update timeframe data
   const updateTimeframe = (tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">, field: keyof TimeframeData, value: string) => {
     setCurrentLog(prev => ({
@@ -1195,9 +1243,15 @@ export default function ChartAnalysis() {
             <DialogTitle className="flex items-center justify-between">
               <span className="text-lg font-bold">📄 ตัวอย่าง PDF</span>
               <div className="flex gap-2">
+                <Button onClick={sharePDF} size="lg" variant="outline" className="gap-2">
+                  <Share2 className="h-5 w-5" />
+                  <span className="hidden sm:inline">แชร์ไลน์</span>
+                  <span className="sm:hidden">แชร์</span>
+                </Button>
                 <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
                   <Download className="h-5 w-5" />
-                  ดาวน์โหลด PDF
+                  <span className="hidden sm:inline">ดาวน์โหลด PDF</span>
+                  <span className="sm:hidden">โหลด</span>
                 </Button>
               </div>
             </DialogTitle>

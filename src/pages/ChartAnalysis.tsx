@@ -677,11 +677,18 @@ export default function ChartAnalysis() {
   // Preview PDF before download
   const previewPDF = async () => {
     setGeneratingPreview(true);
+    // Clean up previous URL if exists
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+    
     try {
       const doc = await generatePDFDocument();
       if (doc) {
+        // Create blob with explicit PDF mime type
         const pdfBlob = doc.output("blob");
-        const blobUrl = URL.createObjectURL(pdfBlob);
+        const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: "application/pdf" }));
         setPdfPreviewUrl(blobUrl);
         setPdfPreviewOpen(true);
       }
@@ -693,7 +700,20 @@ export default function ChartAnalysis() {
     }
   };
 
-  // Download PDF directly
+  // Download PDF from preview or generate new
+  const downloadPDFFromPreview = () => {
+    if (pdfPreviewUrl) {
+      const link = document.createElement("a");
+      link.href = pdfPreviewUrl;
+      link.download = `chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
+    }
+  };
+
+  // Download PDF directly (without preview)
   const exportToPDF = async () => {
     toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
     try {
@@ -701,11 +721,7 @@ export default function ChartAnalysis() {
       if (doc) {
         doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
         setExportDialogOpen(false);
-        setPdfPreviewOpen(false);
-        if (pdfPreviewUrl) {
-          URL.revokeObjectURL(pdfPreviewUrl);
-          setPdfPreviewUrl(null);
-        }
+        closePdfPreview();
         toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
       }
     } catch (error) {
@@ -1172,27 +1188,42 @@ export default function ChartAnalysis() {
         </DialogContent>
       </Dialog>
 
-      {/* PDF Preview Dialog */}
+      {/* PDF Preview Dialog - In-App Modal */}
       <Dialog open={pdfPreviewOpen} onOpenChange={closePdfPreview}>
-        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-4">
-          <DialogHeader>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="p-4 pb-2 border-b">
             <DialogTitle className="flex items-center justify-between">
-              <span>ตัวอย่าง PDF</span>
+              <span className="text-lg font-bold">📄 ตัวอย่าง PDF</span>
               <div className="flex gap-2">
-                <Button onClick={exportToPDF} size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
+                <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
+                  <Download className="h-5 w-5" />
                   ดาวน์โหลด PDF
                 </Button>
               </div>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 h-full min-h-0">
-            {pdfPreviewUrl && (
-              <iframe
-                src={pdfPreviewUrl}
-                className="w-full h-[calc(90vh-100px)] border rounded-lg"
-                title="PDF Preview"
-              />
+          <div className="flex-1 p-4 pt-2 min-h-0 overflow-hidden">
+            {pdfPreviewUrl ? (
+              <object
+                data={pdfPreviewUrl}
+                type="application/pdf"
+                className="w-full h-full rounded-lg border"
+              >
+                {/* Fallback for browsers that don't support object PDF */}
+                <div className="flex flex-col items-center justify-center h-full bg-muted/30 rounded-lg border">
+                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium mb-2">เบราว์เซอร์ไม่รองรับการแสดง PDF</p>
+                  <p className="text-muted-foreground mb-4">กรุณาดาวน์โหลดไฟล์เพื่อดู</p>
+                  <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
+                    <Download className="h-5 w-5" />
+                    ดาวน์โหลด PDF
+                  </Button>
+                </div>
+              </object>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
             )}
           </div>
         </DialogContent>

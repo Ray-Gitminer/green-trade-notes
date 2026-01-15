@@ -514,9 +514,10 @@ export default function ChartAnalysis() {
         chart: 30,
       };
 
-      // Row height with thumbnail
+      // Base row height with thumbnail
       const thumbHeight = 12;
-      const rowHeight = thumbHeight + 4;
+      const baseRowHeight = thumbHeight + 4;
+      const detailsLineHeight = 4; // Line height for wrapped text
 
       // Draw table header
       doc.setFillColor(40, 60, 45); // Dark green header
@@ -546,12 +547,22 @@ export default function ChartAnalysis() {
         }
       }
 
-      // Draw table rows with thumbnails
+      // Calculate row heights based on details text wrapping
       doc.setFont("Sarabun", "normal");
       doc.setFontSize(smallFontSize - 1);
+      const maxDetailsWidth = colWidths.details - 4;
+      
+      const tfRowData = timeframes.map(tf => {
+        const wrappedLines = doc.splitTextToSize(tf.structure, maxDetailsWidth);
+        const linesCount = Math.max(1, wrappedLines.length);
+        const dynamicHeight = Math.max(baseRowHeight, linesCount * detailsLineHeight + 6);
+        return { ...tf, wrappedLines, rowHeight: dynamicHeight };
+      });
 
-      for (let i = 0; i < timeframes.length; i++) {
-        const tf = timeframes[i];
+      // Draw table rows with dynamic height for wrapped text
+      for (let i = 0; i < tfRowData.length; i++) {
+        const tf = tfRowData[i];
+        const rowHeight = tf.rowHeight;
         
         // Alternate row background
         if (i % 2 === 0) {
@@ -573,14 +584,14 @@ export default function ChartAnalysis() {
         
         // Draw cell content
         xPos = margin + 2;
-        const textY = yPos + rowHeight / 2 + 1.5;
+        const centerY = yPos + rowHeight / 2 + 1.5;
         
-        // TF Name (bold)
+        // TF Name (bold) - vertically centered
         doc.setFont("Sarabun", "bold");
-        doc.text(tf.name, xPos, textY);
+        doc.text(tf.name, xPos, centerY);
         xPos += colWidths.tf;
         
-        // Signal with color indicator
+        // Signal with color indicator - vertically centered
         doc.setFont("Sarabun", "normal");
         if (tf.signal === "Buy") {
           doc.setTextColor(16, 185, 129);
@@ -589,35 +600,32 @@ export default function ChartAnalysis() {
         } else {
           doc.setTextColor(100, 100, 100);
         }
-        doc.text(tf.signal, xPos, textY);
+        doc.text(tf.signal, xPos, centerY);
         doc.setTextColor(0, 0, 0);
         xPos += colWidths.signal;
         
-        // Details (truncate if too long)
-        const maxDetailsWidth = colWidths.details - 4;
-        let detailsText = tf.structure;
-        while (doc.getTextWidth(detailsText) > maxDetailsWidth && detailsText.length > 0) {
-          detailsText = detailsText.slice(0, -1);
+        // Details - wrapped text
+        doc.setFont("Sarabun", "normal");
+        let detailsY = yPos + 4;
+        for (const line of tf.wrappedLines) {
+          doc.text(line, xPos, detailsY + detailsLineHeight - 1);
+          detailsY += detailsLineHeight;
         }
-        if (detailsText !== tf.structure && detailsText.length > 3) {
-          detailsText = detailsText.slice(0, -3) + "...";
-        }
-        doc.text(detailsText, xPos, textY);
         xPos += colWidths.details;
         
-        // Chart thumbnail image
+        // Chart thumbnail image - vertically centered
         const imgData = tfImages[tf.name];
         if (imgData) {
           try {
             const thumbWidth = colWidths.chart - 4;
             const imgX = xPos + 2;
-            const imgY = yPos + 1;
+            const imgY = yPos + (rowHeight - thumbHeight) / 2;
             doc.addImage(imgData, "JPEG", imgX, imgY, thumbWidth, thumbHeight - 2);
           } catch {
-            doc.text("📷", xPos + 10, textY);
+            doc.text("📷", xPos + 10, centerY);
           }
         } else {
-          doc.text("-", xPos + 12, textY);
+          doc.text("-", xPos + 12, centerY);
         }
         
         yPos += rowHeight;

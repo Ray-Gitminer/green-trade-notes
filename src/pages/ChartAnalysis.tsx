@@ -30,6 +30,10 @@ import {
   Trash2,
   File,
   ClipboardPaste,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -97,6 +101,8 @@ export default function ChartAnalysis() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [pdfZoom, setPdfZoom] = useState(100);
+  const [pdfFullscreen, setPdfFullscreen] = useState(false);
 
   const [autoPasteOpen, setAutoPasteOpen] = useState(false);
   const [autoPasteTf, setAutoPasteTf] = useState<keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">>("mn");
@@ -1408,28 +1414,96 @@ export default function ChartAnalysis() {
         </DialogContent>
       </Dialog>
 
-      {/* PDF Preview Dialog - In-App Modal with Fixed Width for iPad/Mobile */}
-      <Dialog open={pdfPreviewOpen} onOpenChange={closePdfPreview}>
-        <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="p-4 pb-2 border-b shrink-0 bg-white text-gray-900">
-            <DialogTitle className="flex items-center justify-between">
+      {/* PDF Preview Dialog - In-App Modal with Fixed Width, Zoom & Fullscreen */}
+      <Dialog open={pdfPreviewOpen} onOpenChange={(open) => {
+        if (!open) {
+          closePdfPreview();
+          setPdfFullscreen(false);
+          setPdfZoom(100);
+        }
+      }}>
+        <DialogContent className={`p-0 flex flex-col overflow-hidden transition-all duration-200 ${
+          pdfFullscreen 
+            ? 'max-w-[100vw] w-[100vw] h-[100vh] rounded-none' 
+            : 'max-w-[95vw] w-[95vw] h-[90vh]'
+        }`}>
+          <DialogHeader className="p-3 pb-2 border-b shrink-0 bg-white text-gray-900">
+            <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-lg font-bold text-gray-900">📄 ตัวอย่าง PDF</span>
-              <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
-                <Download className="h-5 w-5" />
-                <span className="hidden sm:inline">ดาวน์โหลด PDF</span>
-                <span className="sm:hidden">โหลด</span>
-              </Button>
+              
+              {/* Zoom & Fullscreen Controls */}
+              <div className="flex items-center gap-2">
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setPdfZoom(prev => Math.max(50, prev - 25))}
+                    disabled={pdfZoom <= 50}
+                    className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
+                    {pdfZoom}%
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setPdfZoom(prev => Math.min(200, prev + 25))}
+                    disabled={pdfZoom >= 200}
+                    className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Fullscreen Toggle */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPdfFullscreen(prev => !prev)}
+                  className="h-8 gap-1 text-gray-700 border-gray-300 hover:bg-gray-100"
+                >
+                  {pdfFullscreen ? (
+                    <>
+                      <Minimize2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">ย่อ</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">เต็มจอ</span>
+                    </>
+                  )}
+                </Button>
+                
+                {/* Download Button */}
+                <Button onClick={downloadPDFFromPreview} size="sm" className="h-8 gap-1 gradient-emerald">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">ดาวน์โหลด</span>
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
+          
           {/* Scrollable container with fixed minimum width - prevents responsive squeezing */}
           <div className="flex-1 min-h-0 overflow-auto bg-white">
-            <div className="min-w-[1000px] h-full p-4">
+            <div 
+              className="h-full p-4"
+              style={{ 
+                minWidth: `${1000 * (pdfZoom / 100)}px`,
+                transform: `scale(${pdfZoom / 100})`,
+                transformOrigin: 'top left',
+                width: `${100 / (pdfZoom / 100)}%`,
+              }}
+            >
               {pdfPreviewUrl ? (
                 <object
                   data={pdfPreviewUrl}
                   type="application/pdf"
-                  className="w-full h-full rounded-lg border border-gray-300 bg-white"
-                  style={{ minHeight: '100%' }}
+                  className="w-full rounded-lg border border-gray-300 bg-white"
+                  style={{ height: `${100 / (pdfZoom / 100)}%`, minHeight: '100%' }}
                 >
                   {/* Fallback for browsers that don't support object PDF */}
                   <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-300 py-16">

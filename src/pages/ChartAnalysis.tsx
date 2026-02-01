@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -17,19 +16,10 @@ import {
   Loader2,
   Save,
   Calendar,
-  Image,
-  Upload,
   X,
   Download,
   FileText,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Plus,
-  Trash2,
   File,
-  ClipboardPaste,
   Maximize2,
   Minimize2,
   ZoomIn,
@@ -41,16 +31,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import SessionCardContent, { type SessionData } from "@/components/chart-analysis/SessionCardContent";
+import TimeframeRow, { type TimeframeData } from "@/components/chart-analysis/TimeframeRow";
 import { addThaiFont, preloadThaiFont } from "@/utils/pdfThaiFont";
 
-const SIGNALS = ["Buy", "Sell", "Neutral"];
 const SESSION_TIMES = ["07:00", "11:00", "15:00", "19:00"];
-
-interface TimeframeData {
-  signal: string;
-  marketStructure: string;
-  imageUrl: string;
-}
 
 // SessionData is imported from SessionCardContent
 
@@ -928,254 +912,25 @@ export default function ChartAnalysis() {
     }));
   };
 
-  const SignalIcon = ({ signal }: { signal: string }) => {
-    if (signal === "Buy") return <TrendingUp className="h-4 w-4 text-profit" />;
-    if (signal === "Sell") return <TrendingDown className="h-4 w-4 text-loss" />;
-    return <Minus className="h-4 w-4 text-muted-foreground" />;
-  };
-
-  const SigTrailChips = ({
-    value,
-    onChange,
-  }: {
-    value: string;
-    onChange: (next: string) => void;
-  }) => {
-    const items = useMemo(() => parseSigTrail(value), [value]);
-    const [draft, setDraft] = useState("");
-
-    const commitDraft = useCallback(() => {
-      const nextItems = [...items, ...parseSigTrail(draft)];
-      const uniq = Array.from(new Set(nextItems));
-      const trimmed = uniq.map((x) => x.trim()).filter(Boolean).slice(0, 12); // กันยาวเกิน
-      onChange(formatSigTrail(trimmed));
-      setDraft("");
-    }, [draft, items, onChange]);
-
-    const removeItem = useCallback(
-      (it: string) => {
-        onChange(formatSigTrail(items.filter((x) => x !== it)));
-      },
-      [items, onChange],
-    );
-
-    return (
-      <div className="min-h-9 rounded-md border border-input bg-background px-2 py-1 flex flex-wrap items-center gap-1">
-        {items.map((it) => (
-          <Badge key={it} variant="secondary" className="gap-1">
-            <span className="text-xs">{it}</span>
-            <button
-              type="button"
-              className="rounded-sm hover:opacity-80"
-              onClick={() => removeItem(it)}
-              aria-label={`ลบ ${it}`}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
-              e.preventDefault();
-              commitDraft();
-            }
-            if (e.key === "Backspace" && !draft && items.length) {
-              removeItem(items[items.length - 1]);
-            }
-          }}
-          onBlur={() => {
-            if (draft.trim()) commitDraft();
-          }}
-          placeholder={items.length ? "เพิ่ม... (Enter)" : "ไล้หลัง Sig เช่น 1,2,3,4"}
-          className="flex-1 min-w-[70px] bg-transparent outline-none text-sm placeholder:text-muted-foreground"
-          inputMode="numeric"
-        />
-      </div>
-    );
-  };
-
-  // Compact Table Row for each Timeframe
-  const TimeframeRow = ({ 
-    label, 
-    tf 
-  }: { 
-    label: string; 
-    tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">; 
-  }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const dropZoneRef = useRef<HTMLDivElement>(null);
-    const [pasting, setPasting] = useState(false);
-
-    // Quick Paste from Clipboard function
-    const handleQuickPaste = async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setPasting(true);
-      
-      try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const item of clipboardItems) {
-          const imageType = item.types.find(type => type.startsWith('image/'));
-          if (imageType) {
-            const blob = await item.getType(imageType);
-            // Convert blob to file for upload
-            const url = await uploadImage(blob as File, "charts");
-            updateTimeframe(tf, "imageUrl", url);
-            toast({ title: "วางรูปจาก Clipboard สำเร็จ" });
-            return;
-          }
-        }
-        toast({ 
-          title: "ไม่พบรูปในคลิปบอร์ด", 
-          description: "ให้คัดลอกรูปจาก TradingView ก่อน (Ctrl+C)", 
-          variant: "destructive" 
-        });
-      } catch (error) {
-        // Fallback: prompt user to press Ctrl+V
-        toast({ 
-          title: "ใช้ Ctrl+V แทน", 
-          description: "คลิกที่ช่องแล้วกด Ctrl+V เพื่อวางรูป" 
-        });
-        setPasteTarget("charts", (url) => updateTimeframe(tf, "imageUrl", url));
-        dropZoneRef.current?.focus();
-      } finally {
-        setPasting(false);
-      }
-    };
-    
-    return (
-      <div className="grid grid-cols-[60px_100px_1fr_auto] sm:grid-cols-[80px_110px_1fr_auto] gap-2 items-center py-3 px-2 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors">
-        {/* TF Label */}
-        <div className="flex items-center gap-1.5">
-          <SignalIcon signal={currentLog[tf].signal} />
-          <span className="font-semibold text-sm">{label}</span>
-        </div>
-
-        {/* Signal Select */}
-        <Select 
-          value={currentLog[tf].signal} 
-          onValueChange={(v) => updateTimeframe(tf, "signal", v)}
-        >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Sig" />
-          </SelectTrigger>
-          <SelectContent>
-            {SIGNALS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Details / Market Structure - Expanded Textarea */}
-        <Textarea
-          value={currentLog[tf].marketStructure}
-          onChange={(e) => updateTimeframe(tf, "marketStructure", e.target.value)}
-          placeholder="ไล้หลัง Sig เช่น 1,2,3,4"
-          className="flex-1 min-h-[56px] resize-none text-sm break-words"
-          maxLength={800}
-        />
-
-        {/* Image Upload with Quick Paste */}
-        <div
-          ref={dropZoneRef}
-          tabIndex={0}
-          className="flex items-center gap-1"
-          onClick={() => {
-            setPasteTarget("charts", (url) => updateTimeframe(tf, "imageUrl", url));
-            dropZoneRef.current?.focus();
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onDrop={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const file = e.dataTransfer.files?.[0];
-            if (file && file.type.startsWith("image/")) {
-              try {
-                const url = await uploadImage(file, "charts");
-                updateTimeframe(tf, "imageUrl", url);
-                toast({ title: "อัพโหลดรูปสำเร็จ" });
-              } catch {
-                toast({ title: "อัพโหลดล้มเหลว", variant: "destructive" });
-              }
-            }
-          }}
-        >
-          {currentLog[tf].imageUrl ? (
-            <div className="relative group">
-              <img
-                src={currentLog[tf].imageUrl}
-                alt={label}
-                className="h-10 w-14 object-cover rounded border border-border cursor-pointer hover:opacity-80"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxUrl(currentLog[tf].imageUrl);
-                }}
-              />
-              <Button
-                size="icon"
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTimeframe(tf, "imageUrl", "");
-                }}
-              >
-                <X className="h-2 w-2" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              {/* Quick Paste Button */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={handleQuickPaste}
-                disabled={pasting}
-                title="วางรูปจาก Clipboard (Ctrl+V)"
-              >
-                {pasting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ClipboardPaste className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                )}
-              </Button>
-              {/* File Upload Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 gap-1 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-              >
-                <Upload className="h-3 w-3" />
-                <span className="hidden sm:inline">รูป</span>
-              </Button>
-            </div>
-          )}
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleFileUpload(e, (url) => updateTimeframe(tf, "imageUrl", url))}
-        />
-      </div>
-    );
-  };
+  // Render timeframe row helper - uses memoized callbacks
+  const renderTimeframeRow = useCallback(
+    (label: string, tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">) => (
+      <TimeframeRow
+        key={tf}
+        label={label}
+        tfKey={tf}
+        data={currentLog[tf]}
+        onSignalChange={(v) => updateTimeframe(tf, "signal", v)}
+        onMarketStructureChange={(v) => updateTimeframe(tf, "marketStructure", v)}
+        onImageUrlChange={(v) => updateTimeframe(tf, "imageUrl", v)}
+        onImageClick={setLightboxUrl}
+        uploadImage={uploadImage}
+        setPasteTarget={setPasteTarget}
+        toast={toast}
+      />
+    ),
+    [currentLog, updateTimeframe, uploadImage, setPasteTarget, toast]
+  );
 
   // Clear session notes
   const clearSessionNotes = (index: number) => {
@@ -1340,11 +1095,11 @@ export default function ChartAnalysis() {
                 </div>
                 {/* Table Rows */}
                 <div className="divide-y divide-border/30">
-                  <TimeframeRow label="MN" tf="mn" />
-                  <TimeframeRow label="W" tf="w" />
-                  <TimeframeRow label="D" tf="d" />
-                  <TimeframeRow label="H4" tf="h4" />
-                  <TimeframeRow label="H1" tf="h1" />
+                  {renderTimeframeRow("MN", "mn")}
+                  {renderTimeframeRow("W", "w")}
+                  {renderTimeframeRow("D", "d")}
+                  {renderTimeframeRow("H4", "h4")}
+                  {renderTimeframeRow("H1", "h1")}
                 </div>
               </CardContent>
             </Card>

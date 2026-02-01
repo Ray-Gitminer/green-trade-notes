@@ -1071,10 +1071,13 @@ export default function ChartAnalysis() {
           </SelectContent>
         </Select>
 
-        {/* Details / Market Structure */}
-        <SigTrailChips
+        {/* Details / Market Structure - Expanded Textarea */}
+        <Textarea
           value={currentLog[tf].marketStructure}
-          onChange={(next) => updateTimeframe(tf, "marketStructure", next)}
+          onChange={(e) => updateTimeframe(tf, "marketStructure", e.target.value)}
+          placeholder="ไล้หลัง Sig เช่น 1,2,3,4"
+          className="flex-1 min-h-[56px] resize-none text-sm break-words"
+          maxLength={800}
         />
 
         {/* Image Upload with Quick Paste */}

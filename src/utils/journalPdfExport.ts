@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { addThaiFont } from "./pdfThaiFont";
 
@@ -95,11 +95,11 @@ export async function exportJournalPDF(trades: any[]) {
   // Footer row
   const foot = [[
     { content: `ผลรวม (${trades.length} เทรด)`, colSpan: 8, styles: { halign: "right" as const, fontStyle: "bold" as const } },
-    { content: `${totalPL >= 0 ? "+" : ""}$${totalPL.toFixed(2)}`, styles: { halign: "center" as const, fontStyle: "bold" as const, textColor: totalPL >= 0 ? [16, 140, 60] : [200, 50, 50] } },
+    { content: `${totalPL >= 0 ? "+" : ""}$${totalPL.toFixed(2)}`, styles: { halign: "center" as const, fontStyle: "bold" as const, textColor: (totalPL >= 0 ? [16, 140, 60] : [200, 50, 50]) as [number, number, number] } },
     { content: "", colSpan: 2 },
   ]];
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: tableStartY,
     head,
     body,

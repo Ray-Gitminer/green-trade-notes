@@ -16,6 +16,7 @@ const ENTRY_CONDITIONS = [
   { key: "daily_frame", label: "กรอบวัน" },
   { key: "sw_frame", label: "กรอบ SW" },
   { key: "sig", label: "SIG" },
+  { key: "ath_frame", label: "กรอบ ATH" },
 ];
 
 const TRADING_SESSIONS = [

@@ -1,20 +1,27 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 const LINE_CHANNEL_ID = "2009773284";
 
 export default function Auth() {
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const [devOpen, setDevOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -48,8 +55,19 @@ export default function Auth() {
     window.location.href = lineAuthUrl;
   };
 
-
-
+  const handleDevLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast({
+        title: "เข้าสู่ระบบล้มเหลว",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background candlestick-pattern flex items-center justify-center p-4">
@@ -84,6 +102,37 @@ export default function Auth() {
             </svg>
             เข้าสู่ระบบด้วย LINE
           </Button>
+
+          <Collapsible open={devOpen} onOpenChange={setDevOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-4">
+                สำหรับผู้พัฒนาแอป
+                <ChevronDown className={`h-3 w-3 transition-transform ${devOpen ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <form onSubmit={handleDevLogin} className="space-y-3 border border-border/30 rounded-lg p-4 bg-muted/20">
+                <p className="text-xs text-muted-foreground text-center">เข้าสู่ระบบสำหรับผู้พัฒนา (Developer)</p>
+                <Input
+                  type="email"
+                  placeholder="อีเมล"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <Input
+                  type="password"
+                  placeholder="รหัสผ่าน"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button type="submit" variant="outline" className="w-full" disabled={loading}>
+                  {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วยอีเมล"}
+                </Button>
+              </form>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
     </div>

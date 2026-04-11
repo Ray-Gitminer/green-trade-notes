@@ -331,7 +331,7 @@ export default function Journal() {
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">SL</TableHead>
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">ผลกำไร/ขาดทุน</TableHead>
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">อารมณ์/ความมั่นใจ</TableHead>
-                <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60 w-[50px]"></TableHead>
+                <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60 w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

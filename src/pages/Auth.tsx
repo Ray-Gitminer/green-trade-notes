@@ -10,14 +10,11 @@ import logo from "@/assets/logo.png";
 const LINE_CHANNEL_ID = "2009773284";
 
 export default function Auth() {
-  const { user, signIn, signUp } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (user) {

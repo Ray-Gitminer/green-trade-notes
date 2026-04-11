@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { format } from "date-fns";
-import { BookOpen, Plus, AlertTriangle, Trash2 } from "lucide-react";
+import { BookOpen, Plus, AlertTriangle, Trash2, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { exportJournalPDF } from "@/utils/journalPdfExport";
 
 const ENTRY_CONDITIONS = [
   { key: "break_m5", label: "เบรค M5" },
@@ -134,10 +135,28 @@ export default function Journal() {
             บันทึกการเทรด ระบบแม่ปลาปากกาเขียว
           </h1>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={async () => {
+              if (!trades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
+              toast.info("กำลังสร้าง PDF...");
+              try {
+                const doc = await exportJournalPDF(trades);
+                doc.save(`trade-journal-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+                toast.success("ส่งออก PDF สำเร็จ");
+              } catch (e) { console.error(e); toast.error("สร้าง PDF ไม่สำเร็จ"); }
+            }}
+            variant="outline"
+            className="border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            ส่งออก PDF
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
+          </Button>
+        </div>
       </div>
 
       {/* Alert / Reminders */}

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   TrendingUp,
   TrendingDown,
@@ -44,7 +45,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -118,9 +119,21 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h1>
-          <p className="text-muted-foreground">{t("dashboard.welcome")}</p>
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12 border-2 border-primary/30">
+            {profile?.line_picture_url ? (
+              <AvatarImage src={profile.line_picture_url} alt="Profile" />
+            ) : null}
+            <AvatarFallback className="bg-primary/20 text-primary font-bold">
+              {(profile?.line_display_name || profile?.display_name || user?.email || "U").charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {t("dashboard.title")}{profile?.line_display_name ? `, ${profile.line_display_name}` : ""}
+            </h1>
+            <p className="text-muted-foreground">{t("dashboard.welcome")}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button

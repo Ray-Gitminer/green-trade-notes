@@ -55,6 +55,7 @@ export default function Journal() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchTrades = useCallback(async () => {
     if (!user) return;

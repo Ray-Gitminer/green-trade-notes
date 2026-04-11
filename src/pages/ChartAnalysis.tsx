@@ -49,7 +49,7 @@ interface LogData {
 }
 
 const emptyTimeframe = (): TimeframeExtended => ({
-  signal: "", marketStructure: "", imageUrl: "",
+  signal: "", pattern: "", marketStructure: "", imageUrl: "",
   tp1: "", tp2: "", checkpoint: "",
 });
 
@@ -130,6 +130,7 @@ export default function ChartAnalysis() {
 
         const mapTf = (prefix: string): TimeframeExtended => ({
           signal: (logData as any)[`${prefix}_signal`] || "",
+          pattern: (logData as any)[`${prefix}_pattern`] || "",
           marketStructure: (logData as any)[`${prefix}_market_structure`] || "",
           imageUrl: (logData as any)[`${prefix}_image_url`] || "",
           tp1: (logData as any)[`${prefix}_tp1`] || "",
@@ -275,30 +276,35 @@ export default function ChartAnalysis() {
       user_id: user!.id,
       log_date: dateStr,
       mn_signal: currentLog.mn.signal,
+      mn_pattern: currentLog.mn.pattern,
       mn_market_structure: currentLog.mn.marketStructure,
       mn_image_url: currentLog.mn.imageUrl,
       mn_tp1: currentLog.mn.tp1,
       mn_tp2: currentLog.mn.tp2,
       mn_checkpoint: currentLog.mn.checkpoint,
       w_signal: currentLog.w.signal,
+      w_pattern: currentLog.w.pattern,
       w_market_structure: currentLog.w.marketStructure,
       w_image_url: currentLog.w.imageUrl,
       w_tp1: currentLog.w.tp1,
       w_tp2: currentLog.w.tp2,
       w_checkpoint: currentLog.w.checkpoint,
       d_signal: currentLog.d.signal,
+      d_pattern: currentLog.d.pattern,
       d_market_structure: currentLog.d.marketStructure,
       d_image_url: currentLog.d.imageUrl,
       d_tp1: currentLog.d.tp1,
       d_tp2: currentLog.d.tp2,
       d_checkpoint: currentLog.d.checkpoint,
       h4_signal: currentLog.h4.signal,
+      h4_pattern: currentLog.h4.pattern,
       h4_market_structure: currentLog.h4.marketStructure,
       h4_image_url: currentLog.h4.imageUrl,
       h4_tp1: currentLog.h4.tp1,
       h4_tp2: currentLog.h4.tp2,
       h4_checkpoint: currentLog.h4.checkpoint,
       h1_signal: currentLog.h1.signal,
+      h1_pattern: currentLog.h1.pattern,
       h1_market_structure: currentLog.h1.marketStructure,
       h1_image_url: currentLog.h1.imageUrl,
       h1_tp1: currentLog.h1.tp1,

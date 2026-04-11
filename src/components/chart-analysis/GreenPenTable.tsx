@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface TimeframeExtended {
   signal: string;
+  pattern: string;
   marketStructure: string;
   imageUrl: string;
   tp1: string;
@@ -51,6 +52,7 @@ const GreenPenTable = memo(function GreenPenTable({
           <tr className="bg-emerald-900/80 text-emerald-50">
             <th className="border border-emerald-700/60 px-2 py-2 text-left font-semibold w-[70px]">TF</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[85px]">Sig</th>
+            <th className="border border-emerald-700/60 px-2 py-2 text-left font-semibold w-[120px]">Pattern</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-left font-semibold w-[150px]">ไส้หลัง Sig</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[320px]">Take Profit</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[105px]">จุดเช็ค</th>
@@ -87,6 +89,15 @@ const GreenPenTable = memo(function GreenPenTable({
                       <span className="text-xs text-red-400">S</span>
                     </label>
                   </div>
+                </td>
+                {/* Pattern */}
+                <td className="border border-emerald-800/30 px-1 py-1">
+                  <Input
+                    value={tfData.pattern}
+                    onChange={(e) => onUpdate(tf.key, "pattern", e.target.value)}
+                    placeholder="Pattern..."
+                    className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500"
+                  />
                 </td>
                 {/* ไส้หลัง Sig */}
                 <td className="border border-emerald-800/30 px-1 py-1">

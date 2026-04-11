@@ -100,7 +100,7 @@ export default function Journal() {
       status: "closed",
     } as any);
     setSaving(false);
-    if (error) { toast.error("บันทึกไม่สำเร็จ"); return; }
+    if (error) { console.error("Trade save error:", error); toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
     toast.success("บันทึกเทรดสำเร็จ");
     setForm(defaultForm);
     setShowForm(false);

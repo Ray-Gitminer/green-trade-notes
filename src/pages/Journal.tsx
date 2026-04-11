@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import TradeSummary from "@/components/journal/TradeSummary";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -326,6 +327,9 @@ export default function Journal() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Trade Summary & Analytics */}
+      <TradeSummary trades={filteredTrades} />
 
       {/* Entry Form */}
       {showForm && (

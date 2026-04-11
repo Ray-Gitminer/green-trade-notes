@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Save } from "lucide-react";
+import { FileText, Save, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { th, enUS } from "date-fns/locale";
 
@@ -18,6 +19,7 @@ export default function DailyNotes() {
   const [notes, setNotes] = useState<any[]>([]);
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("general");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => { if (user) fetchNotes(); }, [user]);
 
@@ -29,10 +31,37 @@ export default function DailyNotes() {
 
   const handleSave = async () => {
     if (!user || !content.trim()) return;
-    await supabase.from("daily_notes").insert({ user_id: user.id, note_date: new Date().toISOString().split("T")[0], category, content });
-    toast({ title: t("notes.noteSaved") });
+    if (editingId) {
+      await supabase.from("daily_notes").update({ category, content }).eq("id", editingId);
+      toast({ title: "แก้ไขบันทึกสำเร็จ" });
+      setEditingId(null);
+    } else {
+      await supabase.from("daily_notes").insert({ user_id: user.id, note_date: new Date().toISOString().split("T")[0], category, content });
+      toast({ title: t("notes.noteSaved") });
+    }
     setContent("");
+    setCategory("general");
     fetchNotes();
+  };
+
+  const handleEdit = (note: any) => {
+    setContent(note.content);
+    setCategory(note.category || "general");
+    setEditingId(note.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("ต้องการลบบันทึกนี้หรือไม่?")) return;
+    await supabase.from("daily_notes").delete().eq("id", id);
+    toast({ title: "ลบบันทึกสำเร็จ" });
+    fetchNotes();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setContent("");
+    setCategory("general");
   };
 
   const categoryColors: Record<string, string> = { market_outlook: "text-primary", psychology: "text-psychology", lessons_learned: "text-accent", general: "text-muted-foreground" };
@@ -53,7 +82,7 @@ export default function DailyNotes() {
       </div>
 
       <Card className="glass-card">
-        <CardHeader><CardTitle>{t("notes.newNote")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{editingId ? "แก้ไขบันทึก" : t("notes.newNote")}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
@@ -65,7 +94,10 @@ export default function DailyNotes() {
             </SelectContent>
           </Select>
           <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder={t("notes.placeholder")} className="min-h-32" />
-          <Button onClick={handleSave} className="gradient-emerald"><Save className="h-4 w-4 mr-2" />{t("notes.saveNote")}</Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} className="gradient-emerald"><Save className="h-4 w-4 mr-2" />{editingId ? "บันทึกการแก้ไข" : t("notes.saveNote")}</Button>
+            {editingId && <Button variant="outline" onClick={handleCancelEdit}>ยกเลิก</Button>}
+          </div>
         </CardContent>
       </Card>
 
@@ -75,7 +107,11 @@ export default function DailyNotes() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-medium ${categoryColors[note.category]}`}>{categoryLabels[note.category] || note.category}</span>
-                <span className="text-xs text-muted-foreground">{format(new Date(note.note_date), "PPP", { locale: language === "th" ? th : enUS })}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{format(new Date(note.note_date), "PPP", { locale: language === "th" ? th : enUS })}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => handleEdit(note)}><Pencil className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(note.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
               </div>
               <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
             </CardContent>

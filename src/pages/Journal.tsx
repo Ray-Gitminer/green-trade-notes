@@ -185,7 +185,8 @@ export default function Journal() {
     toast.info("กำลังสร้างตัวอย่าง PDF...");
     try {
       const doc = await exportJournalPDF(filteredTrades);
-      const blob = doc.output("blob");
+      const pdfOutput = doc.output("blob");
+      const blob = new Blob([pdfOutput], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       setPdfBlob(blob);
       setPdfPreviewUrl(url);
@@ -520,14 +521,19 @@ export default function Journal() {
               </Button>
             </div>
           </DialogHeader>
-          <div className="flex-1 p-4 pt-0">
-            {pdfPreviewUrl && (
-              <iframe
-                src={pdfPreviewUrl}
-                className="w-full h-full rounded-lg border border-border"
-                title="PDF Preview"
-              />
-            )}
+          <div className="flex-1 p-4 pt-0 min-h-0 overflow-auto bg-white rounded-b-lg">
+            {pdfPreviewUrl ? (
+              <object data={pdfPreviewUrl} type="application/pdf" className="w-full h-full rounded-lg border border-border">
+                <div className="flex flex-col items-center justify-center h-full py-16">
+                  <FileDown className="h-16 w-16 text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium mb-2">เบราว์เซอร์ไม่รองรับการแสดง PDF</p>
+                  <Button onClick={handleDownloadPDF} className="bg-primary hover:bg-primary/90">
+                    <Download className="h-4 w-4 mr-2" />
+                    ดาวน์โหลด PDF
+                  </Button>
+                </div>
+              </object>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

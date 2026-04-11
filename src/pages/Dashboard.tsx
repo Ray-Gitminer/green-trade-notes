@@ -13,6 +13,7 @@ import {
   BarChart3,
   PlusCircle,
   BookOpen,
+  LineChart,
 } from "lucide-react";
 import { format } from "date-fns";
 import {

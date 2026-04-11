@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { format } from "date-fns";
-import { BookOpen, Plus, AlertTriangle, Trash2, FileDown } from "lucide-react";
+import { BookOpen, Plus, AlertTriangle, Trash2, FileDown, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { exportJournalPDF } from "@/utils/journalPdfExport";
 
@@ -55,6 +55,7 @@ export default function Journal() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchTrades = useCallback(async () => {
     if (!user) return;
@@ -84,8 +85,7 @@ export default function Journal() {
       ...form.entry_conditions,
       ...(form.entry_conditions_other ? { other: form.entry_conditions_other } : {}),
     };
-    const { error } = await supabase.from("trades").insert({
-      user_id: user.id,
+    const payload = {
       pair: form.pair,
       trade_type: form.trade_type,
       trade_date: form.trade_date,
@@ -99,13 +99,48 @@ export default function Journal() {
       entry_conditions: conditions,
       trading_session: form.trading_session || null,
       status: "closed",
-    } as any);
+    } as any;
+
+    let error;
+    if (editingId) {
+      ({ error } = await supabase.from("trades").update(payload).eq("id", editingId));
+    } else {
+      ({ error } = await supabase.from("trades").insert({ ...payload, user_id: user.id }));
+    }
     setSaving(false);
     if (error) { console.error("Trade save error:", error); toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
-    toast.success("บันทึกเทรดสำเร็จ");
+    toast.success(editingId ? "แก้ไขเทรดสำเร็จ" : "บันทึกเทรดสำเร็จ");
     setForm(defaultForm);
+    setEditingId(null);
     setShowForm(false);
     fetchTrades();
+  };
+
+  const handleEdit = (trade: any) => {
+    const ec = trade.entry_conditions || {};
+    setForm({
+      trade_date: trade.trade_date ? format(new Date(trade.trade_date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+      entry_conditions: {
+        break_m5: !!ec.break_m5,
+        daily_frame: !!ec.daily_frame,
+        sw_frame: !!ec.sw_frame,
+        sig: !!ec.sig,
+        ath_frame: !!ec.ath_frame,
+      },
+      entry_conditions_other: ec.other || "",
+      trading_session: trade.trading_session || "",
+      lot_size: trade.lot_size != null ? String(trade.lot_size) : "",
+      trade_type: trade.trade_type as "buy" | "sell",
+      entry_price: trade.entry_price != null ? String(trade.entry_price) : "",
+      take_profit: trade.take_profit != null ? String(trade.take_profit) : "",
+      stop_loss: trade.stop_loss != null ? String(trade.stop_loss) : "",
+      profit_loss: trade.profit_loss != null ? String(trade.profit_loss) : "",
+      emotional_state: trade.emotional_state || "",
+      confidence_level: trade.confidence_level != null ? String(trade.confidence_level) : "",
+      pair: trade.pair || "XAUUSD",
+    });
+    setEditingId(trade.id);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -152,7 +187,7 @@ export default function Journal() {
             <FileDown className="h-4 w-4 mr-2" />
             ส่งออก PDF
           </Button>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-primary hover:bg-primary/90">
+          <Button onClick={() => { setShowForm(!showForm); if (showForm) { setEditingId(null); setForm(defaultForm); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
           </Button>
@@ -177,7 +212,7 @@ export default function Journal() {
       {showForm && (
         <Card className="glass-card border-primary/30">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-primary">กรอกข้อมูลเทรด</CardTitle>
+            <CardTitle className="text-lg text-primary">{editingId ? "แก้ไขข้อมูลเทรด" : "กรอกข้อมูลเทรด"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Row 1: Date & Pair */}
@@ -274,7 +309,7 @@ export default function Journal() {
             </div>
 
             <Button onClick={handleSubmit} disabled={saving} className="w-full bg-primary hover:bg-primary/90">
-              {saving ? "กำลังบันทึก..." : "บันทึกเทรด"}
+              {saving ? "กำลังบันทึก..." : editingId ? "บันทึกการแก้ไข" : "บันทึกเทรด"}
             </Button>
           </CardContent>
         </Card>
@@ -296,7 +331,7 @@ export default function Journal() {
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">SL</TableHead>
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">ผลกำไร/ขาดทุน</TableHead>
                 <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60">อารมณ์/ความมั่นใจ</TableHead>
-                <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60 w-[50px]"></TableHead>
+                <TableHead className="text-emerald-50 font-semibold text-center border border-emerald-700/60 w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -327,9 +362,14 @@ export default function Journal() {
                     {trade.emotional_state || "-"}{trade.confidence_level ? ` (${trade.confidence_level}%)` : ""}
                   </TableCell>
                   <TableCell className="text-center border border-emerald-800/30">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-950/30" onClick={() => handleDelete(trade.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30" onClick={() => handleEdit(trade)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-950/30" onClick={() => handleDelete(trade.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

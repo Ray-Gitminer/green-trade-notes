@@ -22,7 +22,9 @@ import {
   X,
   MessageCircle,
   LineChart,
+  User,
 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RyutaChat from "@/components/chat/RyutaChat";
 import logo from "@/assets/logo.png";
 

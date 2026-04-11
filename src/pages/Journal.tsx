@@ -191,9 +191,9 @@ export default function Journal() {
             </div>
 
             {/* Row 2: Entry Conditions */}
-            <div>
+              <div>
               <label className="text-xs text-muted-foreground mb-2 block">เงื่อนไขการเข้าเทรด (รอบ กรอบ ซิก)</label>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 items-center">
                 {ENTRY_CONDITIONS.map(c => (
                   <label key={c.key} className="flex items-center gap-2 cursor-pointer">
                     <Checkbox
@@ -204,6 +204,15 @@ export default function Journal() {
                     <span className="text-sm">{c.label}</span>
                   </label>
                 ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">อื่นๆ:</span>
+                  <Input
+                    value={form.entry_conditions_other}
+                    onChange={e => setForm(p => ({ ...p, entry_conditions_other: e.target.value }))}
+                    placeholder="ระบุเงื่อนไขเพิ่มเติม..."
+                    className="bg-transparent border-emerald-800/40 w-48 h-8 text-sm"
+                  />
+                </div>
               </div>
             </div>
 

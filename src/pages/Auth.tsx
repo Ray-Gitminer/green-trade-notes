@@ -48,57 +48,8 @@ export default function Auth() {
     window.location.href = lineAuthUrl;
   };
 
-  const handleSubmit = async (mode: "login" | "signup") => {
-    const result = authSchema.safeParse({ email, password });
-    if (!result.success) {
-      toast({
-        title: t("auth.validationError"),
-        description: t("auth.invalidCredentials"),
-        variant: "destructive",
-      });
-      return;
-    }
 
-    setLoading(true);
-    try {
-      if (mode === "login") {
-        const { error } = await signIn(email, password);
-        if (error) {
-          toast({
-            title: t("auth.loginFailed"),
-            description: t("auth.invalidEmailPassword"),
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: t("auth.welcomeBack"),
-            description: t("auth.loginSuccess"),
-          });
-          navigate("/dashboard");
-        }
-      } else {
-        const { error } = await signUp(email, password);
-        if (error) {
-          const message = error.message.includes("already registered")
-            ? t("auth.alreadyRegistered")
-            : error.message;
-          toast({
-            title: t("auth.signUpFailed"),
-            description: message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: t("auth.accountCreated"),
-            description: t("auth.canStartJournaling"),
-          });
-          navigate("/dashboard");
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-background candlestick-pattern flex items-center justify-center p-4">

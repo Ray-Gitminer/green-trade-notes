@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import { format } from "date-fns";
-import { BookOpen, Plus, AlertTriangle, Trash2, FileDown, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { th } from "date-fns/locale";
+import { BookOpen, Plus, AlertTriangle, Trash2, FileDown, Pencil, CalendarIcon, Eye, Download, X, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { exportJournalPDF } from "@/utils/journalPdfExport";
+import { cn } from "@/lib/utils";
 
 const ENTRY_CONDITIONS = [
   { key: "break_m5", label: "เบรค M5" },
@@ -57,6 +62,16 @@ export default function Journal() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Date filter
+  const [filterStartDate, setFilterStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [filterEndDate, setFilterEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
+  const [showFilter, setShowFilter] = useState(false);
+
+  // PDF preview
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+
   const fetchTrades = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -69,6 +84,21 @@ export default function Journal() {
   }, [user]);
 
   useEffect(() => { if (user) fetchTrades(); }, [user, fetchTrades]);
+
+  // Filtered trades based on date range
+  const filteredTrades = useMemo(() => {
+    if (!filterStartDate && !filterEndDate) return trades;
+    return trades.filter(t => {
+      if (!t.trade_date) return false;
+      const d = new Date(t.trade_date);
+      if (filterStartDate && filterEndDate) {
+        return isWithinInterval(d, { start: filterStartDate, end: filterEndDate });
+      }
+      if (filterStartDate) return d >= filterStartDate;
+      if (filterEndDate) return d <= filterEndDate;
+      return true;
+    });
+  }, [trades, filterStartDate, filterEndDate]);
 
   const handleConditionToggle = (key: string) => {
     setForm(prev => ({
@@ -150,8 +180,53 @@ export default function Journal() {
     fetchTrades();
   };
 
-  const totalPL = trades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
-  const tradeCount = trades.length;
+  const handlePreviewPDF = async () => {
+    if (!filteredTrades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
+    toast.info("กำลังสร้างตัวอย่าง PDF...");
+    try {
+      const doc = await exportJournalPDF(filteredTrades);
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      setPdfBlob(blob);
+      setPdfPreviewUrl(url);
+      setShowPdfPreview(true);
+    } catch (e) { console.error(e); toast.error("สร้าง PDF ไม่สำเร็จ"); }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (pdfBlob) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(pdfBlob);
+      link.download = `trade-journal-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("ดาวน์โหลด PDF สำเร็จ");
+      return;
+    }
+    if (!filteredTrades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
+    toast.info("กำลังสร้าง PDF...");
+    try {
+      const doc = await exportJournalPDF(filteredTrades);
+      doc.save(`trade-journal-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("ส่งออก PDF สำเร็จ");
+    } catch (e) { console.error(e); toast.error("สร้าง PDF ไม่สำเร็จ"); }
+  };
+
+  const closePdfPreview = () => {
+    setShowPdfPreview(false);
+    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    setPdfPreviewUrl(null);
+    setPdfBlob(null);
+  };
+
+  const clearFilter = () => {
+    setFilterStartDate(undefined);
+    setFilterEndDate(undefined);
+  };
+
+  const totalPL = filteredTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
+  const tradeCount = filteredTrades.length;
 
   const conditionsText = (conditions: any) => {
     if (!conditions || typeof conditions !== "object") return "-";
@@ -170,22 +245,18 @@ export default function Journal() {
             บันทึกการเทรด ระบบแม่ปลาปากกาเขียว
           </h1>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={async () => {
-              if (!trades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
-              toast.info("กำลังสร้าง PDF...");
-              try {
-                const doc = await exportJournalPDF(trades);
-                doc.save(`trade-journal-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-                toast.success("ส่งออก PDF สำเร็จ");
-              } catch (e) { console.error(e); toast.error("สร้าง PDF ไม่สำเร็จ"); }
-            }}
-            variant="outline"
-            className="border-primary/50 text-primary hover:bg-primary/10"
-          >
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowFilter(!showFilter)} className="border-primary/50 text-primary hover:bg-primary/10">
+            <Filter className="h-4 w-4 mr-2" />
+            กรองวันที่
+          </Button>
+          <Button variant="outline" onClick={handlePreviewPDF} className="border-primary/50 text-primary hover:bg-primary/10">
+            <Eye className="h-4 w-4 mr-2" />
+            ดูตัวอย่าง PDF
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPDF} className="border-primary/50 text-primary hover:bg-primary/10">
             <FileDown className="h-4 w-4 mr-2" />
-            ส่งออก PDF
+            ดาวน์โหลด PDF
           </Button>
           <Button onClick={() => { setShowForm(!showForm); if (showForm) { setEditingId(null); setForm(defaultForm); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
@@ -193,6 +264,53 @@ export default function Journal() {
           </Button>
         </div>
       </div>
+
+      {/* Date Filter */}
+      {showFilter && (
+        <Card className="glass-card border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">วันที่เริ่มต้น</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterStartDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterStartDate ? format(filterStartDate, "dd/MM/yyyy") : "เลือกวันที่"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterStartDate} onSelect={setFilterStartDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">วันที่สิ้นสุด</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterEndDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterEndDate ? format(filterEndDate, "dd/MM/yyyy") : "เลือกวันที่"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterEndDate} onSelect={setFilterEndDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button variant="ghost" onClick={clearFilter} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4 mr-1" />
+                ล้างตัวกรอง
+              </Button>
+              {(filterStartDate || filterEndDate) && (
+                <span className="text-xs text-muted-foreground">
+                  แสดง {filteredTrades.length} จาก {trades.length} เทรด
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alert / Reminders */}
       <Card className="border-yellow-600/50 bg-yellow-950/20">
@@ -215,7 +333,6 @@ export default function Journal() {
             <CardTitle className="text-lg text-primary">{editingId ? "แก้ไขข้อมูลเทรด" : "กรอกข้อมูลเทรด"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Row 1: Date & Pair */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">วัน/เดือน/ปี</label>
@@ -246,8 +363,7 @@ export default function Journal() {
               </div>
             </div>
 
-            {/* Row 2: Entry Conditions */}
-              <div>
+            <div>
               <label className="text-xs text-muted-foreground mb-2 block">เงื่อนไขการเข้าเทรด (รอบ กรอบ ซิก)</label>
               <div className="flex flex-wrap gap-4 items-center">
                 {ENTRY_CONDITIONS.map(c => (
@@ -272,7 +388,6 @@ export default function Journal() {
               </div>
             </div>
 
-            {/* Row 3: Order Details */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">ล็อตไซด์</label>
@@ -296,7 +411,6 @@ export default function Journal() {
               </div>
             </div>
 
-            {/* Row 4: Emotion & Confidence */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">อารมณ์ขณะเทรด</label>
@@ -335,7 +449,7 @@ export default function Journal() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trades.map((trade) => (
+              {filteredTrades.map((trade) => (
                 <TableRow key={trade.id} className="border-emerald-800/30 hover:bg-emerald-950/20">
                   <TableCell className="text-center border border-emerald-800/30 text-sm">
                     {trade.trade_date ? format(new Date(trade.trade_date), "dd/MM/yyyy") : "-"}
@@ -373,7 +487,7 @@ export default function Journal() {
                   </TableCell>
                 </TableRow>
               ))}
-              {trades.length === 0 && (
+              {filteredTrades.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">ยังไม่มีบันทึกเทรด</TableCell>
                 </TableRow>
@@ -393,6 +507,30 @@ export default function Journal() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={showPdfPreview} onOpenChange={(open) => { if (!open) closePdfPreview(); }}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+            <DialogTitle className="text-primary">ตัวอย่าง PDF บันทึกการเทรด</DialogTitle>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="border-primary/50 text-primary hover:bg-primary/10">
+                <Download className="h-4 w-4 mr-2" />
+                ดาวน์โหลด
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 p-4 pt-0">
+            {pdfPreviewUrl && (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full rounded-lg border border-border"
+                title="PDF Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

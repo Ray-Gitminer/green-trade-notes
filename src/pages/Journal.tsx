@@ -187,7 +187,7 @@ export default function Journal() {
             <FileDown className="h-4 w-4 mr-2" />
             ส่งออก PDF
           </Button>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-primary hover:bg-primary/90">
+          <Button onClick={() => { setShowForm(!showForm); if (showForm) { setEditingId(null); setForm(defaultForm); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
           </Button>
@@ -212,7 +212,7 @@ export default function Journal() {
       {showForm && (
         <Card className="glass-card border-primary/30">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-primary">กรอกข้อมูลเทรด</CardTitle>
+            <CardTitle className="text-lg text-primary">{editingId ? "แก้ไขข้อมูลเทรด" : "กรอกข้อมูลเทรด"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Row 1: Date & Pair */}
@@ -309,7 +309,7 @@ export default function Journal() {
             </div>
 
             <Button onClick={handleSubmit} disabled={saving} className="w-full bg-primary hover:bg-primary/90">
-              {saving ? "กำลังบันทึก..." : "บันทึกเทรด"}
+              {saving ? "กำลังบันทึก..." : editingId ? "บันทึกการแก้ไข" : "บันทึกเทรด"}
             </Button>
           </CardContent>
         </Card>
@@ -362,9 +362,14 @@ export default function Journal() {
                     {trade.emotional_state || "-"}{trade.confidence_level ? ` (${trade.confidence_level}%)` : ""}
                   </TableCell>
                   <TableCell className="text-center border border-emerald-800/30">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-950/30" onClick={() => handleDelete(trade.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30" onClick={() => handleEdit(trade)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-950/30" onClick={() => handleDelete(trade.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

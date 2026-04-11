@@ -21,6 +21,7 @@ import KnowledgeLibrary from "./pages/KnowledgeLibrary";
 import Settings from "./pages/Settings";
 import ChartAnalysis from "./pages/ChartAnalysis";
 import NotFound from "./pages/NotFound";
+import LineCallback from "./pages/LineCallback";
 
 const queryClient = new QueryClient();
 

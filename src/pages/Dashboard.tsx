@@ -135,15 +135,6 @@ export default function Dashboard() {
             <p className="text-muted-foreground">{t("dashboard.welcome")}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => navigate("/new-trade")}
-            className="gradient-emerald hover:opacity-90"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            {t("nav.newTrade")}
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

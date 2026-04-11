@@ -47,7 +47,7 @@ const GreenPenTable = memo(function GreenPenTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm" style={{ minWidth: 800 }}>
+      <table className="w-full border-collapse text-sm" style={{ minWidth: 700 }}>
         <thead>
           <tr className="bg-emerald-900/80 text-emerald-50">
             <th className="border border-emerald-700/60 px-2 py-2 text-left font-semibold w-[70px]">TF</th>
@@ -56,7 +56,6 @@ const GreenPenTable = memo(function GreenPenTable({
             <th className="border border-emerald-700/60 px-2 py-2 text-left font-semibold w-[150px]">ไส้หลัง Sig</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[320px]">Take Profit</th>
             <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[105px]">จุดเช็ค</th>
-            <th className="border border-emerald-700/60 px-2 py-2 text-center font-semibold w-[160px]">กรอบวัน</th>
           </tr>
         </thead>
         <tbody>
@@ -65,11 +64,9 @@ const GreenPenTable = memo(function GreenPenTable({
 
             return (
               <tr key={tf.key} className="border-b border-emerald-800/30 hover:bg-emerald-950/20 transition-colors">
-                {/* TF Label */}
                 <td className="border border-emerald-800/30 px-2 py-2 font-bold text-foreground">
                   {tf.label}
                 </td>
-                {/* Signal checkboxes */}
                 <td className="border border-emerald-800/30 px-1 py-1">
                   <div className="flex items-center justify-center gap-2">
                     <label className="flex items-center gap-1 cursor-pointer">
@@ -90,7 +87,6 @@ const GreenPenTable = memo(function GreenPenTable({
                     </label>
                   </div>
                 </td>
-                {/* Pattern */}
                 <td className="border border-emerald-800/30 px-1 py-1">
                   <Input
                     value={tfData.pattern}
@@ -99,7 +95,6 @@ const GreenPenTable = memo(function GreenPenTable({
                     className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500"
                   />
                 </td>
-                {/* ไส้หลัง Sig */}
                 <td className="border border-emerald-800/30 px-1 py-1">
                   <Input
                     value={tfData.marketStructure}
@@ -108,7 +103,6 @@ const GreenPenTable = memo(function GreenPenTable({
                     className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500"
                   />
                 </td>
-                {/* Take Profit - TP1 & TP2 on same line */}
                 <td className="border border-emerald-800/30 px-1 py-1 text-center">
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">TP</span>
@@ -129,7 +123,6 @@ const GreenPenTable = memo(function GreenPenTable({
                     )}
                   </div>
                 </td>
-                {/* จุดเช็ค */}
                 <td className="border border-emerald-800/30 px-1 py-1">
                   <Input
                     value={tfData.checkpoint}
@@ -137,43 +130,43 @@ const GreenPenTable = memo(function GreenPenTable({
                     className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500 text-center"
                   />
                 </td>
-                {/* กรอบวัน - only show for first row, rowSpan all 5 */}
-                {tf.key === "mn" && (
-                  <td className="border border-emerald-800/30 px-2 py-2 text-xs align-top" rowSpan={5}>
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <span className="text-emerald-400 font-semibold block text-center">ต้านหลัก</span>
-                        <Input
-                          value={mainResistance}
-                          readOnly
-                          className="h-7 text-xs bg-transparent border-emerald-800/40 text-center"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-yellow-400 font-semibold block text-center">รับต้านย่อย</span>
-                        <Input
-                          value={minorSr}
-                          onChange={(e) => onSrUpdate("minorSr", e.target.value)}
-                          placeholder="กรอกค่า..."
-                          className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500 text-center"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-emerald-400 font-semibold block text-center">รับหลัก</span>
-                        <Input
-                          value={mainSupport}
-                          readOnly
-                          className="h-7 text-xs bg-transparent border-emerald-800/40 text-center"
-                        />
-                      </div>
-                    </div>
-                  </td>
-                )}
               </tr>
             );
           })}
         </tbody>
       </table>
+
+      {/* กรอบวัน - moved below table */}
+      <div className="mt-3 border border-emerald-800/40 rounded-lg p-3 bg-emerald-950/20">
+        <h4 className="text-sm font-semibold text-emerald-400 mb-2 text-center">กรอบวัน</h4>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <span className="text-emerald-400 font-semibold block text-center text-xs">ต้านหลัก</span>
+            <Input
+              value={mainResistance}
+              readOnly
+              className="h-7 text-xs bg-transparent border-emerald-800/40 text-center"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-yellow-400 font-semibold block text-center text-xs">รับต้านย่อย</span>
+            <Input
+              value={minorSr}
+              onChange={(e) => onSrUpdate("minorSr", e.target.value)}
+              placeholder="กรอกค่า..."
+              className="h-7 text-xs bg-transparent border-emerald-800/40 focus:border-emerald-500 text-center"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-emerald-400 font-semibold block text-center text-xs">รับหลัก</span>
+            <Input
+              value={mainSupport}
+              readOnly
+              className="h-7 text-xs bg-transparent border-emerald-800/40 text-center"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 });

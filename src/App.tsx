@@ -21,6 +21,7 @@ import KnowledgeLibrary from "./pages/KnowledgeLibrary";
 import Settings from "./pages/Settings";
 import ChartAnalysis from "./pages/ChartAnalysis";
 import NotFound from "./pages/NotFound";
+import LineCallback from "./pages/LineCallback";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/line-callback" element={<LineCallback />} />
             <Route
               path="/dashboard"
               element={

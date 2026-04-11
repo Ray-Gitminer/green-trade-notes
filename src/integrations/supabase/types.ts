@@ -582,6 +582,7 @@ export type Database = {
           d_notes: string | null
           d_signal: string | null
           emotional_state: string | null
+          entry_conditions: Json | null
           entry_price: number | null
           h1_notes: string | null
           h1_signal: string | null
@@ -603,6 +604,7 @@ export type Database = {
           take_profit: number | null
           trade_date: string | null
           trade_type: string
+          trading_session: string | null
           updated_at: string
           user_id: string
           w_notes: string | null
@@ -616,6 +618,7 @@ export type Database = {
           d_notes?: string | null
           d_signal?: string | null
           emotional_state?: string | null
+          entry_conditions?: Json | null
           entry_price?: number | null
           h1_notes?: string | null
           h1_signal?: string | null
@@ -637,6 +640,7 @@ export type Database = {
           take_profit?: number | null
           trade_date?: string | null
           trade_type: string
+          trading_session?: string | null
           updated_at?: string
           user_id: string
           w_notes?: string | null
@@ -650,6 +654,7 @@ export type Database = {
           d_notes?: string | null
           d_signal?: string | null
           emotional_state?: string | null
+          entry_conditions?: Json | null
           entry_price?: number | null
           h1_notes?: string | null
           h1_signal?: string | null
@@ -671,6 +676,7 @@ export type Database = {
           take_profit?: number | null
           trade_date?: string | null
           trade_type?: string
+          trading_session?: string | null
           updated_at?: string
           user_id?: string
           w_notes?: string | null

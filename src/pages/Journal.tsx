@@ -85,8 +85,7 @@ export default function Journal() {
       ...form.entry_conditions,
       ...(form.entry_conditions_other ? { other: form.entry_conditions_other } : {}),
     };
-    const { error } = await supabase.from("trades").insert({
-      user_id: user.id,
+    const payload = {
       pair: form.pair,
       trade_type: form.trade_type,
       trade_date: form.trade_date,
@@ -100,13 +99,48 @@ export default function Journal() {
       entry_conditions: conditions,
       trading_session: form.trading_session || null,
       status: "closed",
-    } as any);
+    } as any;
+
+    let error;
+    if (editingId) {
+      ({ error } = await supabase.from("trades").update(payload).eq("id", editingId));
+    } else {
+      ({ error } = await supabase.from("trades").insert({ ...payload, user_id: user.id }));
+    }
     setSaving(false);
     if (error) { console.error("Trade save error:", error); toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
-    toast.success("บันทึกเทรดสำเร็จ");
+    toast.success(editingId ? "แก้ไขเทรดสำเร็จ" : "บันทึกเทรดสำเร็จ");
     setForm(defaultForm);
+    setEditingId(null);
     setShowForm(false);
     fetchTrades();
+  };
+
+  const handleEdit = (trade: any) => {
+    const ec = trade.entry_conditions || {};
+    setForm({
+      trade_date: trade.trade_date ? format(new Date(trade.trade_date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+      entry_conditions: {
+        break_m5: !!ec.break_m5,
+        daily_frame: !!ec.daily_frame,
+        sw_frame: !!ec.sw_frame,
+        sig: !!ec.sig,
+        ath_frame: !!ec.ath_frame,
+      },
+      entry_conditions_other: ec.other || "",
+      trading_session: trade.trading_session || "",
+      lot_size: trade.lot_size != null ? String(trade.lot_size) : "",
+      trade_type: trade.trade_type as "buy" | "sell",
+      entry_price: trade.entry_price != null ? String(trade.entry_price) : "",
+      take_profit: trade.take_profit != null ? String(trade.take_profit) : "",
+      stop_loss: trade.stop_loss != null ? String(trade.stop_loss) : "",
+      profit_loss: trade.profit_loss != null ? String(trade.profit_loss) : "",
+      emotional_state: trade.emotional_state || "",
+      confidence_level: trade.confidence_level != null ? String(trade.confidence_level) : "",
+      pair: trade.pair || "XAUUSD",
+    });
+    setEditingId(trade.id);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {

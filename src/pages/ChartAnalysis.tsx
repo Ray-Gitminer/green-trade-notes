@@ -370,16 +370,67 @@ export default function ChartAnalysis() {
     }
   };
 
-  // Update timeframe data
+  // TP auto-calculation config
+  const TP_OFFSETS: Record<string, { tp1: number; tp2?: number }> = {
+    mn: { tp1: 3000 },
+    w: { tp1: 150, tp2: 300 },
+    d: { tp1: 50, tp2: 100 },
+    h4: { tp1: 15, tp2: 30 },
+    h1: { tp1: 10 },
+  };
+
+  const calcTP = (signal: string, marketStructure: string, tfKey: string) => {
+    const base = parseFloat(marketStructure);
+    const offsets = TP_OFFSETS[tfKey];
+    if (!signal || isNaN(base) || !offsets) return { tp1: "", tp2: "" };
+    const mult = signal === "Buy" ? 1 : -1;
+    return {
+      tp1: String(base + offsets.tp1 * mult),
+      tp2: offsets.tp2 != null ? String(base + offsets.tp2 * mult) : "",
+    };
+  };
+
+  // Update timeframe data with auto TP calculation
   const handleTableUpdate = useCallback((tf: string, field: string, value: string) => {
-    setCurrentLog(prev => ({
-      ...prev,
-      [tf]: { ...(prev as any)[tf], [field]: value },
-    }));
+    setCurrentLog(prev => {
+      const tfData = { ...(prev as any)[tf], [field]: value };
+
+      // Recalculate TP when signal or marketStructure changes
+      if (field === "signal" || field === "marketStructure") {
+        const signal = field === "signal" ? value : tfData.signal;
+        const ms = field === "marketStructure" ? value : tfData.marketStructure;
+        const offsets = TP_OFFSETS[tf];
+        const base = parseFloat(ms);
+        if (signal && !isNaN(base) && offsets) {
+          const mult = signal === "Buy" ? 1 : -1;
+          tfData.tp1 = String(base + offsets.tp1 * mult);
+          tfData.tp2 = offsets.tp2 != null ? String(base + offsets.tp2 * mult) : tfData.tp2;
+        } else if (!signal || !ms) {
+          tfData.tp1 = "";
+          tfData.tp2 = "";
+        }
+      }
+
+      return { ...prev, [tf]: tfData };
+    });
   }, []);
 
+  // Auto-calculate กรอบวัน from รับต้านย่อย
   const handleSrUpdate = useCallback((field: string, value: string) => {
-    setCurrentLog(prev => ({ ...prev, [field]: value }));
+    setCurrentLog(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === "minorSr") {
+        const num = parseFloat(value);
+        if (!isNaN(num)) {
+          next.mainResistance = String(num + 5);
+          next.mainSupport = String(num - 5);
+        } else {
+          next.mainResistance = "";
+          next.mainSupport = "";
+        }
+      }
+      return next;
+    });
   }, []);
 
   const updateSession = (index: number, field: keyof SessionData, value: string) => {

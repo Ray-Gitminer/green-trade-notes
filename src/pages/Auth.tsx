@@ -237,7 +237,6 @@ export default function Auth() {
     </div>
   );
 }
-  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);

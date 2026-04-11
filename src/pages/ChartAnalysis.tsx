@@ -681,46 +681,84 @@ export default function ChartAnalysis() {
 
       for (const sessionTime of sessionTimes) {
         const session = sessions.find((s: any) => s.session_time === sessionTime);
-        const hasContent = session?.h4_analysis || session?.h1_analysis || session?.chart_notes;
+        const hasContent = session?.h4_analysis || session?.h1_analysis || session?.chart_notes || session?.h1_image_url || session?.h4_image_url;
         if (!hasContent) continue;
 
-        yPos = checkPageBreak(yPos, 20);
+        yPos = checkPageBreak(yPos, 40);
+
+        // Session header
+        doc.setFillColor(40, 60, 45);
+        doc.rect(margin, yPos, contentWidth, lineHeight + 2, "F");
         doc.setFont("Sarabun", "bold");
         doc.setFontSize(smallFontSize);
-        doc.text(`${sessionTime.replace(":", ".")}น.`, margin, yPos);
-        yPos += lineHeight;
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${sessionTime.replace(":", ".")} น. H1 / H4`, margin + 3, yPos + lineHeight - 1);
+        doc.setTextColor(0, 0, 0);
+        yPos += lineHeight + 4;
 
-        doc.setFont("Sarabun", "normal");
-        doc.setFontSize(smallFontSize - 1);
-
-        const noteContents = [
-          { label: "H4:", text: session?.h4_analysis || "" },
-          { label: "H1:", text: session?.h1_analysis || "" },
-          { label: "โน้ต:", text: session?.chart_notes || "" },
-        ];
-
-        for (const note of noteContents) {
-          if (note.text) {
-            doc.setFont("Sarabun", "bold");
-            doc.text(note.label, margin + 3, yPos);
-            doc.setFont("Sarabun", "normal");
-            const labelWidth = doc.getTextWidth(note.label + " ");
-            const maxTextWidth = contentWidth - 8 - labelWidth;
-            let displayText = note.text;
-            while (doc.getTextWidth(displayText) > maxTextWidth && displayText.length > 0) {
-              displayText = displayText.slice(0, -1);
-            }
-            if (displayText !== note.text && displayText.length > 3) {
-              displayText = displayText.slice(0, -3) + "...";
-            }
-            doc.text(displayText, margin + 3 + labelWidth, yPos);
+        // Chart notes
+        if (session?.chart_notes) {
+          doc.setFont("Sarabun", "bold");
+          doc.setFontSize(smallFontSize - 1);
+          doc.text("สภาพกราฟ / บันทึก:", margin + 3, yPos);
+          yPos += lineHeight - 1;
+          doc.setFont("Sarabun", "normal");
+          const noteLines = doc.splitTextToSize(session.chart_notes, contentWidth - 6);
+          for (const line of noteLines) {
+            yPos = checkPageBreak(yPos, lineHeight);
+            doc.text(line, margin + 3, yPos);
             yPos += lineHeight - 1;
           }
+          yPos += 2;
+        }
+
+        // Chart images side by side
+        const h1ImgUrl = session?.h1_image_url;
+        const h4ImgUrl = session?.h4_image_url;
+        if (h1ImgUrl || h4ImgUrl) {
+          const imgWidth = (contentWidth - 6) / 2;
+          const imgHeight = imgWidth * 0.6;
+          yPos = checkPageBreak(yPos, imgHeight + lineHeight + 4);
+
+          // Labels
+          doc.setFont("Sarabun", "bold");
+          doc.setFontSize(smallFontSize - 1);
+          if (h1ImgUrl) doc.text("H1 Chart", margin + 3, yPos);
+          if (h4ImgUrl) doc.text("H4 Chart", margin + imgWidth + 6, yPos);
+          yPos += lineHeight;
+
+          // Load and render images
+          const [h1Data, h4Data] = await Promise.all([
+            h1ImgUrl ? loadImageAsBase64(h1ImgUrl) : Promise.resolve(null),
+            h4ImgUrl ? loadImageAsBase64(h4ImgUrl) : Promise.resolve(null),
+          ]);
+
+          if (h1Data) {
+            try { doc.addImage(h1Data, "JPEG", margin + 1, yPos, imgWidth, imgHeight); } catch {}
+          } else if (h1ImgUrl) {
+            doc.setFont("Sarabun", "normal");
+            doc.setFontSize(smallFontSize - 2);
+            doc.setTextColor(150, 150, 150);
+            doc.text("(ไม่สามารถโหลดรูปได้)", margin + 3, yPos + imgHeight / 2);
+            doc.setTextColor(0, 0, 0);
+          }
+
+          if (h4Data) {
+            try { doc.addImage(h4Data, "JPEG", margin + imgWidth + 5, yPos, imgWidth, imgHeight); } catch {}
+          } else if (h4ImgUrl) {
+            doc.setFont("Sarabun", "normal");
+            doc.setFontSize(smallFontSize - 2);
+            doc.setTextColor(150, 150, 150);
+            doc.text("(ไม่สามารถโหลดรูปได้)", margin + imgWidth + 6, yPos + imgHeight / 2);
+            doc.setTextColor(0, 0, 0);
+          }
+
+          yPos += imgHeight + 2;
         }
 
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 3;
+        yPos += 4;
       }
     }
 

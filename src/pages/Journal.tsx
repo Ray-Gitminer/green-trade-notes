@@ -16,6 +16,7 @@ const ENTRY_CONDITIONS = [
   { key: "daily_frame", label: "กรอบวัน" },
   { key: "sw_frame", label: "กรอบ SW" },
   { key: "sig", label: "SIG" },
+  { key: "ath_frame", label: "กรอบ ATH" },
 ];
 
 const TRADING_SESSIONS = [
@@ -32,7 +33,8 @@ const SESSION_LABEL: Record<string, string> = {
 
 const defaultForm = {
   trade_date: format(new Date(), "yyyy-MM-dd"),
-  entry_conditions: { break_m5: false, daily_frame: false, sw_frame: false, sig: false },
+  entry_conditions: { break_m5: false, daily_frame: false, sw_frame: false, sig: false, ath_frame: false },
+  entry_conditions_other: "",
   trading_session: "",
   lot_size: "",
   trade_type: "buy" as "buy" | "sell",
@@ -76,6 +78,11 @@ export default function Journal() {
   const handleSubmit = async () => {
     if (!user) return;
     setSaving(true);
+    const confidenceVal = form.confidence_level ? Math.min(100, Math.max(0, parseInt(form.confidence_level))) : null;
+    const conditions = {
+      ...form.entry_conditions,
+      ...(form.entry_conditions_other ? { other: form.entry_conditions_other } : {}),
+    };
     const { error } = await supabase.from("trades").insert({
       user_id: user.id,
       pair: form.pair,
@@ -87,8 +94,8 @@ export default function Journal() {
       lot_size: form.lot_size ? parseFloat(form.lot_size) : null,
       profit_loss: form.profit_loss ? parseFloat(form.profit_loss) : null,
       emotional_state: form.emotional_state || null,
-      confidence_level: form.confidence_level ? parseInt(form.confidence_level) : null,
-      entry_conditions: form.entry_conditions,
+      confidence_level: confidenceVal,
+      entry_conditions: conditions,
       trading_session: form.trading_session || null,
       status: "closed",
     } as any);
@@ -112,7 +119,9 @@ export default function Journal() {
 
   const conditionsText = (conditions: any) => {
     if (!conditions || typeof conditions !== "object") return "-";
-    return ENTRY_CONDITIONS.filter(c => conditions[c.key]).map(c => c.label).join(", ") || "-";
+    const labels = ENTRY_CONDITIONS.filter(c => conditions[c.key]).map(c => c.label);
+    if (conditions.other) labels.push(`อื่นๆ: ${conditions.other}`);
+    return labels.join(", ") || "-";
   };
 
   return (
@@ -184,9 +193,9 @@ export default function Journal() {
             </div>
 
             {/* Row 2: Entry Conditions */}
-            <div>
+              <div>
               <label className="text-xs text-muted-foreground mb-2 block">เงื่อนไขการเข้าเทรด (รอบ กรอบ ซิก)</label>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 items-center">
                 {ENTRY_CONDITIONS.map(c => (
                   <label key={c.key} className="flex items-center gap-2 cursor-pointer">
                     <Checkbox
@@ -197,6 +206,15 @@ export default function Journal() {
                     <span className="text-sm">{c.label}</span>
                   </label>
                 ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">อื่นๆ:</span>
+                  <Input
+                    value={form.entry_conditions_other}
+                    onChange={e => setForm(p => ({ ...p, entry_conditions_other: e.target.value }))}
+                    placeholder="ระบุเงื่อนไขเพิ่มเติม..."
+                    className="bg-transparent border-emerald-800/40 w-48 h-8 text-sm"
+                  />
+                </div>
               </div>
             </div>
 

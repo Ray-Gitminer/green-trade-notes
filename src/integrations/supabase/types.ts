@@ -300,6 +300,9 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          line_display_name: string | null
+          line_picture_url: string | null
+          line_user_id: string | null
           notification_settings: Json | null
           updated_at: string
           user_id: string
@@ -311,6 +314,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          line_display_name?: string | null
+          line_picture_url?: string | null
+          line_user_id?: string | null
           notification_settings?: Json | null
           updated_at?: string
           user_id: string
@@ -322,6 +328,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          line_display_name?: string | null
+          line_picture_url?: string | null
+          line_user_id?: string | null
           notification_settings?: Json | null
           updated_at?: string
           user_id?: string

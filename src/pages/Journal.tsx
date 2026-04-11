@@ -328,6 +328,9 @@ export default function Journal() {
         </CardContent>
       </Card>
 
+      {/* Trade Summary & Analytics */}
+      <TradeSummary trades={filteredTrades} />
+
       {/* Entry Form */}
       {showForm && (
         <Card className="glass-card border-primary/30">

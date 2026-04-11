@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -16,7 +15,6 @@ import {
   Loader2,
   Save,
   Calendar,
-  X,
   Download,
   FileText,
   File,
@@ -31,28 +29,30 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import SessionCardContent, { type SessionData } from "@/components/chart-analysis/SessionCardContent";
-import TimeframeRow, { type TimeframeData } from "@/components/chart-analysis/TimeframeRow";
+import GreenPenTable, { type TimeframeExtended } from "@/components/chart-analysis/GreenPenTable";
 import { addThaiFont, preloadThaiFont } from "@/utils/pdfThaiFont";
 
 const SESSION_TIMES = ["07:00", "11:00", "15:00", "19:00"];
 
-// SessionData is imported from SessionCardContent
-
 interface LogData {
   id?: string;
   logDate: Date;
-  mn: TimeframeData;
-  w: TimeframeData;
-  d: TimeframeData;
-  h4: TimeframeData;
-  h1: TimeframeData;
+  mn: TimeframeExtended;
+  w: TimeframeExtended;
+  d: TimeframeExtended;
+  h4: TimeframeExtended;
+  h1: TimeframeExtended;
   mainResistance: string;
   minorSr: string;
   mainSupport: string;
   sessions: SessionData[];
 }
 
-const emptyTimeframe = (): TimeframeData => ({ signal: "", marketStructure: "", imageUrl: "" });
+const emptyTimeframe = (): TimeframeExtended => ({
+  signal: "", marketStructure: "", imageUrl: "",
+  tp1: "", tp2: "", checkpoint: "",
+});
+
 const emptySession = (time: string): SessionData => ({
   sessionTime: time,
   h1Analysis: "",
@@ -61,14 +61,6 @@ const emptySession = (time: string): SessionData => ({
   h1ImageUrl: "",
   h4ImageUrl: "",
 });
-
-const parseSigTrail = (raw: string): string[] =>
-  raw
-    .split(/[,\n\t ]+/g)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-const formatSigTrail = (items: string[]): string => items.join(",");
 
 export default function ChartAnalysis() {
   const { user } = useAuth();
@@ -81,16 +73,11 @@ export default function ChartAnalysis() {
   const [exportStartDate, setExportStartDate] = useState<Date>(new Date());
   const [exportEndDate, setExportEndDate] = useState<Date>(new Date());
   const [pdfFontSize, setPdfFontSize] = useState<number>(14);
-  const [logs, setLogs] = useState<LogData[]>([]);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
   const [pdfFullscreen, setPdfFullscreen] = useState(false);
-
-  const [autoPasteOpen, setAutoPasteOpen] = useState(false);
-  const [autoPasteTf, setAutoPasteTf] = useState<keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">>("mn");
-
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const [currentLog, setCurrentLog] = useState<LogData>({
@@ -103,7 +90,7 @@ export default function ChartAnalysis() {
     mainResistance: "",
     minorSr: "",
     mainSupport: "",
-    sessions: SESSION_TIMES.map(time => emptySession(time))
+    sessions: SESSION_TIMES.map(time => emptySession(time)),
   });
 
   // Fetch log for selected date
@@ -137,22 +124,31 @@ export default function ChartAnalysis() {
             h4Analysis: existing.h4_analysis || "",
             chartNotes: existing.chart_notes || "",
             h1ImageUrl: existing.h1_image_url || "",
-            h4ImageUrl: existing.h4_image_url || ""
+            h4ImageUrl: existing.h4_image_url || "",
           } : emptySession(time);
+        });
+
+        const mapTf = (prefix: string): TimeframeExtended => ({
+          signal: (logData as any)[`${prefix}_signal`] || "",
+          marketStructure: (logData as any)[`${prefix}_market_structure`] || "",
+          imageUrl: (logData as any)[`${prefix}_image_url`] || "",
+          tp1: (logData as any)[`${prefix}_tp1`] || "",
+          tp2: (logData as any)[`${prefix}_tp2`] || "",
+          checkpoint: (logData as any)[`${prefix}_checkpoint`] || "",
         });
 
         setCurrentLog({
           id: logData.id,
           logDate: date,
-          mn: { signal: logData.mn_signal || "", marketStructure: logData.mn_market_structure || "", imageUrl: logData.mn_image_url || "" },
-          w: { signal: logData.w_signal || "", marketStructure: logData.w_market_structure || "", imageUrl: logData.w_image_url || "" },
-          d: { signal: logData.d_signal || "", marketStructure: logData.d_market_structure || "", imageUrl: logData.d_image_url || "" },
-          h4: { signal: logData.h4_signal || "", marketStructure: logData.h4_market_structure || "", imageUrl: logData.h4_image_url || "" },
-          h1: { signal: logData.h1_signal || "", marketStructure: logData.h1_market_structure || "", imageUrl: logData.h1_image_url || "" },
+          mn: mapTf("mn"),
+          w: mapTf("w"),
+          d: mapTf("d"),
+          h4: mapTf("h4"),
+          h1: mapTf("h1"),
           mainResistance: logData.main_resistance || "",
           minorSr: logData.minor_sr || "",
           mainSupport: logData.main_support || "",
-          sessions
+          sessions,
         });
       } else {
         setCurrentLog({
@@ -165,7 +161,7 @@ export default function ChartAnalysis() {
           mainResistance: "",
           minorSr: "",
           mainSupport: "",
-          sessions: SESSION_TIMES.map(time => emptySession(time))
+          sessions: SESSION_TIMES.map(time => emptySession(time)),
         });
       }
     } catch (error) {
@@ -179,102 +175,33 @@ export default function ChartAnalysis() {
     fetchLogForDate(selectedDate);
   }, [selectedDate, fetchLogForDate]);
 
-  // Preload Thai font for PDF export
   useEffect(() => {
     preloadThaiFont();
   }, []);
 
   // Auto-save every 30 seconds
   const [lastSavedLog, setLastSavedLog] = useState<string>("");
-  
+
   useEffect(() => {
     const currentLogStr = JSON.stringify(currentLog);
-    
-    // Skip if nothing changed or still loading
     if (!user || loading || currentLogStr === lastSavedLog) return;
-    
+
     const autoSaveTimer = setInterval(async () => {
       const latestLogStr = JSON.stringify(currentLog);
       if (latestLogStr !== lastSavedLog) {
         try {
-          const dateStr = format(currentLog.logDate, "yyyy-MM-dd");
-          
-          const logPayload = {
-            user_id: user.id,
-            log_date: dateStr,
-            mn_signal: currentLog.mn.signal,
-            mn_market_structure: currentLog.mn.marketStructure,
-            mn_image_url: currentLog.mn.imageUrl,
-            w_signal: currentLog.w.signal,
-            w_market_structure: currentLog.w.marketStructure,
-            w_image_url: currentLog.w.imageUrl,
-            d_signal: currentLog.d.signal,
-            d_market_structure: currentLog.d.marketStructure,
-            d_image_url: currentLog.d.imageUrl,
-            h4_signal: currentLog.h4.signal,
-            h4_market_structure: currentLog.h4.marketStructure,
-            h4_image_url: currentLog.h4.imageUrl,
-            h1_signal: currentLog.h1.signal,
-            h1_market_structure: currentLog.h1.marketStructure,
-            h1_image_url: currentLog.h1.imageUrl,
-            main_resistance: currentLog.mainResistance,
-            minor_sr: currentLog.minorSr,
-            main_support: currentLog.mainSupport
-          };
-
-          let logId = currentLog.id;
-          
-          if (logId) {
-            await supabase.from("chart_analysis_logs").update(logPayload).eq("id", logId);
-          } else {
-            const { data } = await supabase.from("chart_analysis_logs").insert(logPayload).select("id").single();
-            logId = data?.id;
-            if (logId) {
-              setCurrentLog(prev => ({ ...prev, id: logId }));
-            }
-          }
-
-          if (logId) {
-            for (const session of currentLog.sessions) {
-              const sessionPayload = {
-                user_id: user.id,
-                log_id: logId,
-                session_time: session.sessionTime,
-                h1_analysis: session.h1Analysis,
-                h4_analysis: session.h4Analysis,
-                chart_notes: session.chartNotes,
-                h1_image_url: session.h1ImageUrl,
-                h4_image_url: session.h4ImageUrl
-              };
-
-              if (session.id) {
-                await supabase.from("chart_analysis_sessions").update(sessionPayload).eq("id", session.id);
-              } else {
-                const { data } = await supabase.from("chart_analysis_sessions").insert(sessionPayload).select("id").single();
-                if (data?.id) {
-                  setCurrentLog(prev => ({
-                    ...prev,
-                    sessions: prev.sessions.map(s => 
-                      s.sessionTime === session.sessionTime ? { ...s, id: data.id } : s
-                    )
-                  }));
-                }
-              }
-            }
-          }
-          
+          await saveLog(false);
           setLastSavedLog(latestLogStr);
           console.log("Auto-saved at", new Date().toLocaleTimeString());
         } catch (error) {
           console.error("Auto-save error:", error);
         }
       }
-    }, 30000); // 30 seconds
-    
+    }, 30000);
+
     return () => clearInterval(autoSaveTimer);
   }, [user, loading, currentLog, lastSavedLog]);
-  
-  // Update lastSavedLog when data is fetched
+
   useEffect(() => {
     if (!loading && currentLog) {
       setLastSavedLog(JSON.stringify(currentLog));
@@ -284,26 +211,18 @@ export default function ChartAnalysis() {
   // Upload image
   const uploadImage = async (file: File, folder: string): Promise<string> => {
     if (!user) throw new Error("Not authenticated");
-
     const mimeExt = file.type?.split("/")?.[1] || "png";
     const nameExt = file.name?.includes(".") ? file.name.split(".").pop() : undefined;
     const ext = (nameExt || mimeExt || "png").toLowerCase();
-
     const fileName = `${user.id}/${folder}/${Date.now()}.${ext}`;
-
-    const { error } = await supabase.storage
-      .from("chart-images")
-      .upload(fileName, file, { upsert: true });
-
+    const { error } = await supabase.storage.from("chart-images").upload(fileName, file, { upsert: true });
     if (error) throw error;
-
     const { data } = supabase.storage.from("chart-images").getPublicUrl(fileName);
     return data.publicUrl;
   };
 
-  // Global paste target (because paste events on <div> are unreliable across browsers)
+  // Global paste target
   const pasteTargetRef = useRef<null | { folder: string; updateFn: (url: string) => void }>(null);
-
   const setPasteTarget = useCallback((folder: string, updateFn: (url: string) => void) => {
     pasteTargetRef.current = { folder, updateFn };
   }, []);
@@ -312,125 +231,170 @@ export default function ChartAnalysis() {
     const onWindowPaste = async (e: ClipboardEvent) => {
       const target = pasteTargetRef.current;
       if (!target) return;
-
       const items = e.clipboardData?.items;
       if (!items?.length) return;
-
       const imageItem = Array.from(items).find((it) => it.type.startsWith("image/"));
       if (!imageItem) {
-        toast({
-          title: "ไม่พบรูปในคลิปบอร์ด",
-          description: "ให้คัดลอกรูปจาก TradingView ก่อน แล้วค่อยวาง (Ctrl+V)",
-          variant: "destructive",
-        });
+        toast({ title: "ไม่พบรูปในคลิปบอร์ด", variant: "destructive" });
         return;
       }
-
       e.preventDefault();
       const file = imageItem.getAsFile();
       if (!file) return;
-
       try {
         const url = await uploadImage(file, target.folder);
         target.updateFn(url);
         toast({ title: "วาง/อัพโหลดรูปสำเร็จ" });
       } catch (error) {
         console.error("Paste upload error:", error);
-        toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัพโหลดรูปได้", variant: "destructive" });
+        toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
       }
     };
-
     window.addEventListener("paste", onWindowPaste);
     return () => window.removeEventListener("paste", onWindowPaste);
   }, [toast, user]);
 
-  // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, updateFn: (url: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const url = await uploadImage(file, "charts");
       updateFn(url);
       toast({ title: "อัพโหลดรูปสำเร็จ" });
-    } catch (error) {
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถอัพโหลดรูปได้", variant: "destructive" });
+    } catch {
+      toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
     } finally {
-      // allow re-select same file
       e.target.value = "";
     }
   };
 
-  // Save log
-  const handleSave = async () => {
+  // Build save payload
+  const buildLogPayload = () => {
+    const dateStr = format(currentLog.logDate, "yyyy-MM-dd");
+    return {
+      user_id: user!.id,
+      log_date: dateStr,
+      mn_signal: currentLog.mn.signal,
+      mn_market_structure: currentLog.mn.marketStructure,
+      mn_image_url: currentLog.mn.imageUrl,
+      mn_tp1: currentLog.mn.tp1,
+      mn_tp2: currentLog.mn.tp2,
+      mn_checkpoint: currentLog.mn.checkpoint,
+      w_signal: currentLog.w.signal,
+      w_market_structure: currentLog.w.marketStructure,
+      w_image_url: currentLog.w.imageUrl,
+      w_tp1: currentLog.w.tp1,
+      w_tp2: currentLog.w.tp2,
+      w_checkpoint: currentLog.w.checkpoint,
+      d_signal: currentLog.d.signal,
+      d_market_structure: currentLog.d.marketStructure,
+      d_image_url: currentLog.d.imageUrl,
+      d_tp1: currentLog.d.tp1,
+      d_tp2: currentLog.d.tp2,
+      d_checkpoint: currentLog.d.checkpoint,
+      h4_signal: currentLog.h4.signal,
+      h4_market_structure: currentLog.h4.marketStructure,
+      h4_image_url: currentLog.h4.imageUrl,
+      h4_tp1: currentLog.h4.tp1,
+      h4_tp2: currentLog.h4.tp2,
+      h4_checkpoint: currentLog.h4.checkpoint,
+      h1_signal: currentLog.h1.signal,
+      h1_market_structure: currentLog.h1.marketStructure,
+      h1_image_url: currentLog.h1.imageUrl,
+      h1_tp1: currentLog.h1.tp1,
+      h1_tp2: currentLog.h1.tp2,
+      h1_checkpoint: currentLog.h1.checkpoint,
+      main_resistance: currentLog.mainResistance,
+      minor_sr: currentLog.minorSr,
+      main_support: currentLog.mainSupport,
+    };
+  };
+
+  const saveLog = async (showToast = true) => {
     if (!user) return;
-    setSaving(true);
-    try {
-      const dateStr = format(currentLog.logDate, "yyyy-MM-dd");
-      
-      // Upsert main log
-      const logPayload = {
-        user_id: user.id,
-        log_date: dateStr,
-        mn_signal: currentLog.mn.signal,
-        mn_market_structure: currentLog.mn.marketStructure,
-        mn_image_url: currentLog.mn.imageUrl,
-        w_signal: currentLog.w.signal,
-        w_market_structure: currentLog.w.marketStructure,
-        w_image_url: currentLog.w.imageUrl,
-        d_signal: currentLog.d.signal,
-        d_market_structure: currentLog.d.marketStructure,
-        d_image_url: currentLog.d.imageUrl,
-        h4_signal: currentLog.h4.signal,
-        h4_market_structure: currentLog.h4.marketStructure,
-        h4_image_url: currentLog.h4.imageUrl,
-        h1_signal: currentLog.h1.signal,
-        h1_market_structure: currentLog.h1.marketStructure,
-        h1_image_url: currentLog.h1.imageUrl,
-        main_resistance: currentLog.mainResistance,
-        minor_sr: currentLog.minorSr,
-        main_support: currentLog.mainSupport
-      };
+    const logPayload = buildLogPayload();
+    let logId = currentLog.id;
 
-      let logId = currentLog.id;
-      
+    if (logId) {
+      await supabase.from("chart_analysis_logs").update(logPayload).eq("id", logId);
+    } else {
+      const { data } = await supabase.from("chart_analysis_logs").insert(logPayload).select("id").single();
+      logId = data?.id;
       if (logId) {
-        await supabase.from("chart_analysis_logs").update(logPayload).eq("id", logId);
-      } else {
-        const { data } = await supabase.from("chart_analysis_logs").insert(logPayload).select("id").single();
-        logId = data?.id;
+        setCurrentLog(prev => ({ ...prev, id: logId }));
       }
+    }
 
-      if (logId) {
-        // Upsert sessions
-        for (const session of currentLog.sessions) {
-          const sessionPayload = {
-            user_id: user.id,
-            log_id: logId,
-            session_time: session.sessionTime,
-            h1_analysis: session.h1Analysis,
-            h4_analysis: session.h4Analysis,
-            chart_notes: session.chartNotes,
-            h1_image_url: session.h1ImageUrl,
-            h4_image_url: session.h4ImageUrl
-          };
-
-          if (session.id) {
-            await supabase.from("chart_analysis_sessions").update(sessionPayload).eq("id", session.id);
-          } else {
-            await supabase.from("chart_analysis_sessions").insert(sessionPayload);
+    if (logId) {
+      for (const session of currentLog.sessions) {
+        const sessionPayload = {
+          user_id: user.id,
+          log_id: logId,
+          session_time: session.sessionTime,
+          h1_analysis: session.h1Analysis,
+          h4_analysis: session.h4Analysis,
+          chart_notes: session.chartNotes,
+          h1_image_url: session.h1ImageUrl,
+          h4_image_url: session.h4ImageUrl,
+        };
+        if (session.id) {
+          await supabase.from("chart_analysis_sessions").update(sessionPayload).eq("id", session.id);
+        } else {
+          const { data } = await supabase.from("chart_analysis_sessions").insert(sessionPayload).select("id").single();
+          if (data?.id) {
+            setCurrentLog(prev => ({
+              ...prev,
+              sessions: prev.sessions.map(s =>
+                s.sessionTime === session.sessionTime ? { ...s, id: data.id } : s
+              ),
+            }));
           }
         }
-
-        setCurrentLog(prev => ({ ...prev, id: logId }));
-        toast({ title: "บันทึกสำเร็จ", description: `บันทึกวันที่ ${format(currentLog.logDate, "dd/MM/yyyy")}` });
       }
+    }
+
+    if (showToast) {
+      toast({ title: "บันทึกสำเร็จ", description: `บันทึกวันที่ ${format(currentLog.logDate, "dd/MM/yyyy")}` });
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await saveLog(true);
     } catch (error) {
       console.error("Save error:", error);
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถบันทึกได้", variant: "destructive" });
+      toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
     } finally {
       setSaving(false);
     }
+  };
+
+  // Update timeframe data
+  const handleTableUpdate = useCallback((tf: string, field: string, value: string) => {
+    setCurrentLog(prev => ({
+      ...prev,
+      [tf]: { ...(prev as any)[tf], [field]: value },
+    }));
+  }, []);
+
+  const handleSrUpdate = useCallback((field: string, value: string) => {
+    setCurrentLog(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const updateSession = (index: number, field: keyof SessionData, value: string) => {
+    setCurrentLog(prev => ({
+      ...prev,
+      sessions: prev.sessions.map((s, i) => i === index ? { ...s, [field]: value } : s),
+    }));
+  };
+
+  const clearSessionNotes = (index: number) => {
+    setCurrentLog(prev => ({
+      ...prev,
+      sessions: prev.sessions.map((s, i) => i === index ? { ...s, chartNotes: "" } : s),
+    }));
+    toast({ title: "ล้างบันทึกสำเร็จ" });
   };
 
   // Export functions
@@ -446,14 +410,9 @@ export default function ChartAnalysis() {
     return data || [];
   };
 
-
-  // Helper function to load image and convert to base64
   const loadImageAsBase64 = (url: string): Promise<string | null> => {
     return new Promise((resolve) => {
-      if (!url) {
-        resolve(null);
-        return;
-      }
+      if (!url) { resolve(null); return; }
       const img = new window.Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
@@ -464,49 +423,33 @@ export default function ChartAnalysis() {
         if (ctx) {
           ctx.drawImage(img, 0, 0);
           resolve(canvas.toDataURL("image/jpeg", 0.8));
-        } else {
-          resolve(null);
-        }
+        } else resolve(null);
       };
       img.onerror = () => resolve(null);
       img.src = url;
     });
   };
 
-  // Generate PDF document (reusable for preview and download)
   const generatePDFDocument = async () => {
     const data = await fetchLogsForExport(exportStartDate, exportEndDate);
     if (!data.length) {
-      toast({ title: "ไม่มีข้อมูล", description: "ไม่พบข้อมูลในช่วงวันที่เลือก", variant: "destructive" });
+      toast({ title: "ไม่มีข้อมูล", variant: "destructive" });
       return null;
     }
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    
-    // Add Thai font support for proper character rendering
     await addThaiFont(doc);
-    
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
     const contentWidth = pageWidth - margin * 2;
-    
-    // Font sizes based on user selection
     const baseFontSize = pdfFontSize;
     const titleFontSize = baseFontSize + 4;
     const headerFontSize = baseFontSize + 2;
     const smallFontSize = baseFontSize - 2;
     const lineHeight = baseFontSize * 0.5;
 
-    // Helper to draw dotted line
-    const drawDottedLine = (y: number, startX: number = margin, endX: number = pageWidth - margin) => {
-      doc.setDrawColor(150, 150, 150);
-      doc.setLineDashPattern([1, 1], 0);
-      doc.line(startX, y, endX, y);
-      doc.setLineDashPattern([], 0);
-    };
-
-    // Helper to add page break if needed
     const checkPageBreak = (yPos: number, requiredSpace: number): number => {
       if (yPos + requiredSpace > pageHeight - margin) {
         doc.addPage();
@@ -515,14 +458,12 @@ export default function ChartAnalysis() {
       return yPos;
     };
 
-    // Load logo once for all pages
     let logoData: string | null = null;
     try {
       const logoModule = await import("@/assets/logo-report.png");
-      const logoUrl = logoModule.default;
-      logoData = await loadImageAsBase64(logoUrl);
+      logoData = await loadImageAsBase64(logoModule.default);
     } catch {
-      console.log("Logo not found, continuing without logo");
+      console.log("Logo not found");
     }
 
     for (let logIndex = 0; logIndex < data.length; logIndex++) {
@@ -530,206 +471,121 @@ export default function ChartAnalysis() {
       if (logIndex > 0) doc.addPage();
 
       let yPos = margin;
-
-      // ========== HEADER SECTION ==========
-      // Logo in top-left corner
       const logoSize = 18;
       if (logoData) {
-        try {
-          doc.addImage(logoData, "PNG", margin, yPos - 3, logoSize, logoSize);
-        } catch {
-          console.log("Failed to add logo to PDF");
-        }
+        try { doc.addImage(logoData, "PNG", margin, yPos - 3, logoSize, logoSize); } catch {}
       }
 
-      // Title: "บันทึกการเดินทางของกราฟ" (offset to right of logo)
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(titleFontSize);
       doc.setTextColor(0, 0, 0);
       const titleX = logoData ? margin + logoSize + 4 : margin;
       doc.text("บันทึกการเดินทางของกราฟ", titleX, yPos + 4);
-      
-      // Date (below title)
       doc.setFont("Sarabun", "normal");
       doc.setFontSize(baseFontSize);
       doc.text(`วันที่ ${log.log_date}`, titleX, yPos + 4 + lineHeight + 2);
-      
       yPos += logoSize + 4;
 
-      // ========== TF CHECK TABLE (Horizontal Table Layout with Thumbnails) ==========
-      // Section header
+      // TF table
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(headerFontSize);
-      doc.text("เช็ค Sig / วงจรกราฟของทุก TF (07.00น.)", margin, yPos);
+      doc.text("เช็ค Sig / วงจรกราฟของทุก TF", margin, yPos);
       yPos += lineHeight + 3;
 
-      // TF data array with image URLs
       const timeframes = [
-        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", imageUrl: log.mn_image_url },
-        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", imageUrl: log.w_image_url },
-        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", imageUrl: log.d_image_url },
-        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", imageUrl: log.h4_image_url },
-        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", imageUrl: log.h1_image_url },
+        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", tp1: (log as any).mn_tp1 || "", tp2: (log as any).mn_tp2 || "" },
+        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", tp1: (log as any).w_tp1 || "", tp2: (log as any).w_tp2 || "" },
+        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", tp1: (log as any).d_tp1 || "", tp2: (log as any).d_tp2 || "" },
+        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", tp1: (log as any).h4_tp1 || "", tp2: (log as any).h4_tp2 || "" },
+        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", tp1: (log as any).h1_tp1 || "", tp2: (log as any).h1_tp2 || "" },
       ];
 
-      // Table column widths (adjusted for thumbnail)
-      const colWidths = {
-        tf: 16,
-        signal: 22,
-        details: contentWidth - 16 - 22 - 30,
-        chart: 30,
-      };
+      const colWidths = { tf: 16, signal: 18, details: contentWidth - 16 - 18 - 24 - 24, tp: 24, chart: 24 };
+      const rowHeight = 10;
 
-      // Base row height with thumbnail
-      const thumbHeight = 12;
-      const baseRowHeight = thumbHeight + 4;
-      const detailsLineHeight = 4; // Line height for wrapped text
-
-      // Draw table header
-      doc.setFillColor(40, 60, 45); // Dark green header
+      // Header
+      doc.setFillColor(40, 60, 45);
       doc.rect(margin, yPos, contentWidth, lineHeight + 2, "F");
-      
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(smallFontSize - 1);
       doc.setTextColor(255, 255, 255);
-      
       let xPos = margin + 2;
       doc.text("TF", xPos, yPos + lineHeight - 1);
       xPos += colWidths.tf;
       doc.text("Sig", xPos, yPos + lineHeight - 1);
       xPos += colWidths.signal;
-      doc.text("Details", xPos, yPos + lineHeight - 1);
+      doc.text("ไส้หลัง Sig", xPos, yPos + lineHeight - 1);
       xPos += colWidths.details;
-      doc.text("Chart", xPos, yPos + lineHeight - 1);
-      
+      doc.text("TP", xPos, yPos + lineHeight - 1);
       yPos += lineHeight + 3;
       doc.setTextColor(0, 0, 0);
 
-      // Pre-load all TF images for thumbnails
-      const tfImages: { [key: string]: string | null } = {};
-      for (const tf of timeframes) {
-        if (tf.imageUrl) {
-          tfImages[tf.name] = await loadImageAsBase64(tf.imageUrl);
-        }
-      }
+      for (let i = 0; i < timeframes.length; i++) {
+        const tf = timeframes[i];
+        const wrappedLines = doc.splitTextToSize(tf.structure, colWidths.details - 4);
+        const dynamicHeight = Math.max(rowHeight, wrappedLines.length * 4 + 4);
 
-      // Calculate row heights based on details text wrapping
-      doc.setFont("Sarabun", "normal");
-      doc.setFontSize(smallFontSize - 1);
-      const maxDetailsWidth = colWidths.details - 4;
-      
-      const tfRowData = timeframes.map(tf => {
-        const wrappedLines = doc.splitTextToSize(tf.structure, maxDetailsWidth);
-        const linesCount = Math.max(1, wrappedLines.length);
-        const dynamicHeight = Math.max(baseRowHeight, linesCount * detailsLineHeight + 6);
-        return { ...tf, wrappedLines, rowHeight: dynamicHeight };
-      });
-
-      // Draw table rows with dynamic height for wrapped text
-      for (let i = 0; i < tfRowData.length; i++) {
-        const tf = tfRowData[i];
-        const rowHeight = tf.rowHeight;
-        
-        // Alternate row background
         if (i % 2 === 0) {
           doc.setFillColor(248, 248, 248);
-          doc.rect(margin, yPos, contentWidth, rowHeight, "F");
+          doc.rect(margin, yPos, contentWidth, dynamicHeight, "F");
         }
-        
-        // Draw row border
         doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, yPos, contentWidth, rowHeight, "S");
-        
-        // Draw column separators
-        let colX = margin + colWidths.tf;
-        doc.line(colX, yPos, colX, yPos + rowHeight);
-        colX += colWidths.signal;
-        doc.line(colX, yPos, colX, yPos + rowHeight);
-        colX += colWidths.details;
-        doc.line(colX, yPos, colX, yPos + rowHeight);
-        
-        // Draw cell content
+        doc.rect(margin, yPos, contentWidth, dynamicHeight, "S");
+
         xPos = margin + 2;
-        const centerY = yPos + rowHeight / 2 + 1.5;
-        
-        // TF Name (bold) - vertically centered
+        const centerY = yPos + dynamicHeight / 2 + 1.5;
         doc.setFont("Sarabun", "bold");
+        doc.setFontSize(smallFontSize - 1);
         doc.text(tf.name, xPos, centerY);
         xPos += colWidths.tf;
-        
-        // Signal with color indicator - vertically centered
+
         doc.setFont("Sarabun", "normal");
-        if (tf.signal === "Buy") {
-          doc.setTextColor(16, 185, 129);
-        } else if (tf.signal === "Sell") {
-          doc.setTextColor(220, 38, 38);
-        } else {
-          doc.setTextColor(100, 100, 100);
-        }
+        if (tf.signal === "Buy") doc.setTextColor(16, 185, 129);
+        else if (tf.signal === "Sell") doc.setTextColor(220, 38, 38);
+        else doc.setTextColor(100, 100, 100);
         doc.text(tf.signal, xPos, centerY);
         doc.setTextColor(0, 0, 0);
         xPos += colWidths.signal;
-        
-        // Details - wrapped text
-        doc.setFont("Sarabun", "normal");
+
         let detailsY = yPos + 4;
-        for (const line of tf.wrappedLines) {
-          doc.text(line, xPos, detailsY + detailsLineHeight - 1);
-          detailsY += detailsLineHeight;
+        for (const line of wrappedLines) {
+          doc.text(line, xPos, detailsY + 3);
+          detailsY += 4;
         }
         xPos += colWidths.details;
-        
-        // Chart thumbnail image - vertically centered
-        const imgData = tfImages[tf.name];
-        if (imgData) {
-          try {
-            const thumbWidth = colWidths.chart - 4;
-            const imgX = xPos + 2;
-            const imgY = yPos + (rowHeight - thumbHeight) / 2;
-            doc.addImage(imgData, "JPEG", imgX, imgY, thumbWidth, thumbHeight - 2);
-          } catch {
-            doc.text("📷", xPos + 10, centerY);
-          }
-        } else {
-          doc.text("-", xPos + 12, centerY);
-        }
-        
-        yPos += rowHeight;
+
+        doc.text(tf.tp1 ? `TP1: ${tf.tp1}` : "-", xPos, centerY - 2);
+        if (tf.tp2) doc.text(`TP2: ${tf.tp2}`, xPos, centerY + 2);
+
+        yPos += dynamicHeight;
       }
 
       yPos += 2;
 
-      // ========== SUPPORT/RESISTANCE SECTION (Compact) ==========
+      // S/R
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(smallFontSize);
       doc.text("กรอบวัน:", margin, yPos);
-      
-      // Inline S/R display for compactness
       doc.setFont("Sarabun", "normal");
-      const srLine = `ต้านหลัก: ${log.main_resistance || "-"}  |  รับ-ต้านย่อย: ${log.minor_sr || "-"}  |  รับหลัก: ${log.main_support || "-"}`;
+      const srLine = `ต้านหลัก: ${log.main_resistance || "-"}  |  รับต้านย่อย: ${log.minor_sr || "-"}  |  รับหลัก: ${log.main_support || "-"}`;
       doc.text(srLine, margin + 22, yPos);
       yPos += lineHeight + 4;
 
-      // ========== SESSIONS SECTION (Compact) ==========
+      // Sessions
       const sessions = log.chart_analysis_sessions || [];
       const sessionTimes = ["07:00", "11:00", "15:00", "19:00"];
 
       for (const sessionTime of sessionTimes) {
-        const session = sessions.find((s: { session_time: string }) => s.session_time === sessionTime);
-        
-        // Skip empty sessions to save space
+        const session = sessions.find((s: any) => s.session_time === sessionTime);
         const hasContent = session?.h4_analysis || session?.h1_analysis || session?.chart_notes;
         if (!hasContent) continue;
 
         yPos = checkPageBreak(yPos, 20);
-
-        // Session header (compact)
         doc.setFont("Sarabun", "bold");
         doc.setFontSize(smallFontSize);
         doc.text(`${sessionTime.replace(":", ".")}น.`, margin, yPos);
         yPos += lineHeight;
 
-        // Notes lines (compact - single line each)
         doc.setFont("Sarabun", "normal");
         doc.setFontSize(smallFontSize - 1);
 
@@ -744,11 +600,8 @@ export default function ChartAnalysis() {
             doc.setFont("Sarabun", "bold");
             doc.text(note.label, margin + 3, yPos);
             doc.setFont("Sarabun", "normal");
-            
             const labelWidth = doc.getTextWidth(note.label + " ");
             const maxTextWidth = contentWidth - 8 - labelWidth;
-            
-            // Truncate to fit single line for compactness
             let displayText = note.text;
             while (doc.getTextWidth(displayText) > maxTextWidth && displayText.length > 0) {
               displayText = displayText.slice(0, -1);
@@ -756,94 +609,29 @@ export default function ChartAnalysis() {
             if (displayText !== note.text && displayText.length > 3) {
               displayText = displayText.slice(0, -3) + "...";
             }
-            
             doc.text(displayText, margin + 3 + labelWidth, yPos);
             yPos += lineHeight - 1;
           }
         }
 
-        // Thin separator line
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 3;
-      }
-
-      // ========== IMAGES PAGE ==========
-      // Add images on a separate page for each log
-      const timeframeImages = [
-        { name: "MN", url: log.mn_image_url },
-        { name: "W", url: log.w_image_url },
-        { name: "D", url: log.d_image_url },
-        { name: "H4", url: log.h4_image_url },
-        { name: "H1", url: log.h1_image_url },
-      ].filter(tf => tf.url);
-
-      const sessionImages = sessions.flatMap((s: { session_time: string; h4_image_url?: string; h1_image_url?: string }) => [
-        s.h4_image_url ? { name: `${s.session_time} H4`, url: s.h4_image_url } : null,
-        s.h1_image_url ? { name: `${s.session_time} H1`, url: s.h1_image_url } : null,
-      ]).filter(Boolean);
-
-      const allImages = [...timeframeImages, ...sessionImages];
-
-      if (allImages.length > 0) {
-        doc.addPage();
-        yPos = margin;
-
-        doc.setFont("Sarabun", "bold");
-        doc.setFontSize(titleFontSize);
-        doc.text(`รูปภาพประกอบ - ${log.log_date}`, pageWidth / 2, yPos, { align: "center" });
-        yPos += lineHeight + 8;
-
-        const imgWidth = (contentWidth - 10) / 2;
-        const imgHeight = 50;
-
-        for (let i = 0; i < allImages.length; i += 2) {
-          yPos = checkPageBreak(yPos, imgHeight + 15);
-
-          for (let j = 0; j < 2 && i + j < allImages.length; j++) {
-            const img = allImages[i + j];
-            const xPos = margin + j * (imgWidth + 10);
-
-            // Image label
-            doc.setFont("Sarabun", "bold");
-            doc.setFontSize(smallFontSize);
-            doc.text(img!.name, xPos, yPos);
-
-            // Load and add image
-            const imgData = await loadImageAsBase64(img!.url || "");
-            if (imgData) {
-              try {
-                doc.addImage(imgData, "JPEG", xPos, yPos + 3, imgWidth, imgHeight);
-              } catch {
-                doc.setFillColor(220, 220, 220);
-                doc.rect(xPos, yPos + 3, imgWidth, imgHeight, "F");
-                doc.setFont("Sarabun", "normal");
-                doc.setFontSize(smallFontSize);
-                doc.text("ไม่สามารถโหลดรูปได้", xPos + imgWidth / 2, yPos + imgHeight / 2 + 3, { align: "center" });
-              }
-            }
-          }
-          yPos += imgHeight + 15;
-        }
       }
     }
 
     return doc;
   };
 
-  // Preview PDF before download
   const previewPDF = async () => {
     setGeneratingPreview(true);
-    // Clean up previous URL if exists
     if (pdfPreviewUrl) {
       URL.revokeObjectURL(pdfPreviewUrl);
       setPdfPreviewUrl(null);
     }
-    
     try {
       const doc = await generatePDFDocument();
       if (doc) {
-        // Create blob with explicit PDF mime type
         const pdfBlob = doc.output("blob");
         const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: "application/pdf" }));
         setPdfPreviewUrl(blobUrl);
@@ -851,13 +639,12 @@ export default function ChartAnalysis() {
       }
     } catch (error) {
       console.error("Error generating PDF preview:", error);
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถสร้าง Preview ได้", variant: "destructive" });
+      toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
     } finally {
       setGeneratingPreview(false);
     }
   };
 
-  // Download PDF from preview or generate new
   const downloadPDFFromPreview = () => {
     if (pdfPreviewUrl) {
       const link = document.createElement("a");
@@ -866,28 +653,26 @@ export default function ChartAnalysis() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
+      toast({ title: "ส่งออก PDF สำเร็จ" });
     }
   };
 
-  // Download PDF directly (without preview)
   const exportToPDF = async () => {
-    toast({ title: "กำลังสร้าง PDF...", description: "รอสักครู่" });
+    toast({ title: "กำลังสร้าง PDF..." });
     try {
       const doc = await generatePDFDocument();
       if (doc) {
         doc.save(`chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-to-${format(exportEndDate, "yyyy-MM-dd")}.pdf`);
         setExportDialogOpen(false);
         closePdfPreview();
-        toast({ title: "ส่งออก PDF สำเร็จ", description: "รูปแบบสมุดบันทึก พร้อมรูปภาพ" });
+        toast({ title: "ส่งออก PDF สำเร็จ" });
       }
     } catch (error) {
       console.error("Error exporting PDF:", error);
-      toast({ title: "เกิดข้อผิดพลาด", description: "ไม่สามารถส่งออก PDF ได้", variant: "destructive" });
+      toast({ title: "เกิดข้อผิดพลาด", variant: "destructive" });
     }
   };
 
-  // Cleanup preview URL on close
   const closePdfPreview = () => {
     setPdfPreviewOpen(false);
     if (pdfPreviewUrl) {
@@ -896,77 +681,15 @@ export default function ChartAnalysis() {
     }
   };
 
-  // Update timeframe data
-  const updateTimeframe = (tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">, field: keyof TimeframeData, value: string) => {
-    setCurrentLog(prev => ({
-      ...prev,
-      [tf]: { ...prev[tf], [field]: value }
-    }));
-  };
-
-  // Update session data
-  const updateSession = (index: number, field: keyof SessionData, value: string) => {
-    setCurrentLog(prev => ({
-      ...prev,
-      sessions: prev.sessions.map((s, i) => i === index ? { ...s, [field]: value } : s)
-    }));
-  };
-
-  // Render timeframe row helper - uses memoized callbacks
-  const renderTimeframeRow = useCallback(
-    (label: string, tf: keyof Pick<LogData, "mn" | "w" | "d" | "h4" | "h1">) => (
-      <TimeframeRow
-        key={tf}
-        label={label}
-        tfKey={tf}
-        data={currentLog[tf]}
-        onSignalChange={(v) => updateTimeframe(tf, "signal", v)}
-        onMarketStructureChange={(v) => updateTimeframe(tf, "marketStructure", v)}
-        onImageUrlChange={(v) => updateTimeframe(tf, "imageUrl", v)}
-        onImageClick={setLightboxUrl}
-        uploadImage={uploadImage}
-        setPasteTarget={setPasteTarget}
-        toast={toast}
-      />
-    ),
-    [currentLog, updateTimeframe, uploadImage, setPasteTarget, toast]
-  );
-
-  // Clear session notes
-  const clearSessionNotes = (index: number) => {
-    setCurrentLog(prev => ({
-      ...prev,
-      sessions: prev.sessions.map((s, i) => i === index ? { ...s, chartNotes: "" } : s)
-    }));
-    toast({ title: "ล้างบันทึกสำเร็จ" });
-  };
-
-  // Session Card - extracted as a stable render function to avoid inline component re-creation
-  const renderSessionCard = (session: SessionData, index: number) => {
-    return (
-      <SessionCardContent
-        key={session.sessionTime}
-        session={session}
-        index={index}
-        updateSession={updateSession}
-        clearSessionNotes={clearSessionNotes}
-        setPasteTarget={setPasteTarget}
-        uploadImage={uploadImage}
-        handleFileUpload={handleFileUpload}
-        setLightboxUrl={setLightboxUrl}
-        toast={toast}
-      />
-    );
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+    <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">📊 บันทึกการเดินทางของกราฟ</h1>
-          <p className="text-muted-foreground">เช็ค Sig ทุก TF และจดบันทึกทุกเซสชัน</p>
+          <p className="text-muted-foreground">ธีมปากกาเขียว — เช็ค Sig ทุก TF และจดบันทึกทุกเซสชัน</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -983,7 +706,7 @@ export default function ChartAnalysis() {
               />
             </PopoverContent>
           </Popover>
-          
+
           <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2">
@@ -1007,11 +730,7 @@ export default function ChartAnalysis() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={exportStartDate}
-                          onSelect={(date) => date && setExportStartDate(date)}
-                        />
+                        <CalendarComponent mode="single" selected={exportStartDate} onSelect={(date) => date && setExportStartDate(date)} />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -1025,25 +744,15 @@ export default function ChartAnalysis() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={exportEndDate}
-                          onSelect={(date) => date && setExportEndDate(date)}
-                        />
+                        <CalendarComponent mode="single" selected={exportEndDate} onSelect={(date) => date && setExportEndDate(date)} />
                       </PopoverContent>
                     </Popover>
                   </div>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>ขนาดตัวอักษร PDF</Label>
-                  <Select 
-                    value={String(pdfFontSize)} 
-                    onValueChange={(v) => setPdfFontSize(Number(v))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={String(pdfFontSize)} onValueChange={(v) => setPdfFontSize(Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="12">12pt (เล็ก)</SelectItem>
                       <SelectItem value="14">14pt (ปกติ)</SelectItem>
@@ -1052,7 +761,6 @@ export default function ChartAnalysis() {
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <div className="flex flex-col gap-2">
                   <Button onClick={previewPDF} variant="secondary" className="gap-2" disabled={generatingPreview}>
                     {generatingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
@@ -1060,7 +768,7 @@ export default function ChartAnalysis() {
                   </Button>
                   <Button onClick={exportToPDF} variant="outline" className="gap-2">
                     <File className="h-4 w-4" />
-                    ดาวน์โหลด PDF (แบบสมุด)
+                    ดาวน์โหลด PDF
                   </Button>
                 </div>
               </div>
@@ -1074,87 +782,62 @@ export default function ChartAnalysis() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <Tabs defaultValue="morning" className="space-y-6">
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="morning">เช็ค Sig เช้า (07:00)</TabsTrigger>
-            <TabsTrigger value="sessions">บันทึกรอบวัน</TabsTrigger>
-          </TabsList>
+        <div className="space-y-6">
+          {/* ===== SECTION 1: ตารางวิเคราะห์หลัก (Green Pen Table) ===== */}
+          <Card className="border-emerald-800/40 bg-card/80 backdrop-blur">
+            <CardHeader className="pb-2 border-b border-emerald-800/30">
+              <CardTitle className="text-lg text-emerald-400 flex items-center gap-2">
+                🖊️ ตารางวิเคราะห์ — ปากกาเขียว
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 sm:p-4">
+              <GreenPenTable
+                mn={currentLog.mn}
+                w={currentLog.w}
+                d={currentLog.d}
+                h4={currentLog.h4}
+                h1={currentLog.h1}
+                mainResistance={currentLog.mainResistance}
+                minorSr={currentLog.minorSr}
+                mainSupport={currentLog.mainSupport}
+                onUpdate={handleTableUpdate}
+                onSrUpdate={handleSrUpdate}
+              />
+            </CardContent>
+          </Card>
 
-          <TabsContent value="morning" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">เช็ค Sig / วงจรกราฟ (07:00 น.)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {/* Table Header */}
-                <div className="grid grid-cols-[60px_100px_1fr_auto] sm:grid-cols-[80px_110px_1fr_auto] gap-2 items-center py-2 px-2 bg-muted/50 border-b border-border/50 text-xs font-medium text-muted-foreground">
-                  <span>TF</span>
-                  <span>Signal</span>
-                  <span>บันทึกไส้ใน</span>
-                  <span>Chart</span>
-                </div>
-                {/* Table Rows */}
-                <div className="divide-y divide-border/30">
-                  {renderTimeframeRow("MN", "mn")}
-                  {renderTimeframeRow("W", "w")}
-                  {renderTimeframeRow("D", "d")}
-                  {renderTimeframeRow("H4", "h4")}
-                  {renderTimeframeRow("H1", "h1")}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>กรอบวัน (Market Structure)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>ต้านหลัก</Label>
-                    <Input 
-                      placeholder="ระดับแนวต้านหลัก"
-                      value={currentLog.mainResistance}
-                      onChange={(e) => setCurrentLog(prev => ({ ...prev, mainResistance: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>รับ-ต้านย่อย</Label>
-                    <Input 
-                      placeholder="ระดับรับ-ต้านย่อย"
-                      value={currentLog.minorSr}
-                      onChange={(e) => setCurrentLog(prev => ({ ...prev, minorSr: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>รับหลัก</Label>
-                    <Input 
-                      placeholder="ระดับแนวรับหลัก"
-                      value={currentLog.mainSupport}
-                      onChange={(e) => setCurrentLog(prev => ({ ...prev, mainSupport: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sessions" className="space-y-4">
-            {currentLog.sessions.map((session, index) =>
-              renderSessionCard(session, index)
-            )}
-          </TabsContent>
-        </Tabs>
+          {/* ===== SECTION 2: Timeline บันทึกรายชั่วโมง ===== */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              ⏰ บันทึกรอบวัน — Timeline
+            </h2>
+            {currentLog.sessions.map((session, index) => (
+              <SessionCardContent
+                key={session.sessionTime}
+                session={session}
+                index={index}
+                updateSession={updateSession}
+                clearSessionNotes={clearSessionNotes}
+                setPasteTarget={setPasteTarget}
+                uploadImage={uploadImage}
+                handleFileUpload={handleFileUpload}
+                setLightboxUrl={setLightboxUrl}
+                toast={toast}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
-      <Button 
-        onClick={handleSave} 
-        disabled={saving} 
-        className="w-full gradient-emerald"
+      {/* Save Plan Button */}
+      <Button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
         size="lg"
       >
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-        บันทึก
+        💾 Save Plan — บันทึกแผน
       </Button>
 
       {/* Lightbox Dialog */}
@@ -1162,113 +845,52 @@ export default function ChartAnalysis() {
         <DialogContent className="max-w-4xl max-h-[90vh] p-2">
           <div className="relative flex items-center justify-center">
             {lightboxUrl && (
-              <img
-                src={lightboxUrl}
-                alt="Preview"
-                className="max-w-full max-h-[85vh] object-contain rounded"
-              />
+              <img src={lightboxUrl} alt="Preview" className="max-w-full max-h-[85vh] object-contain rounded" />
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* PDF Preview Dialog - In-App Modal with Fixed Width, Zoom & Fullscreen */}
+      {/* PDF Preview Dialog */}
       <Dialog open={pdfPreviewOpen} onOpenChange={(open) => {
-        if (!open) {
-          closePdfPreview();
-          setPdfFullscreen(false);
-          setPdfZoom(100);
-        }
+        if (!open) { closePdfPreview(); setPdfFullscreen(false); setPdfZoom(100); }
       }}>
         <DialogContent className={`p-0 flex flex-col overflow-hidden transition-all duration-200 ${
-          pdfFullscreen 
-            ? 'max-w-[100vw] w-[100vw] h-[100vh] rounded-none' 
+          pdfFullscreen
+            ? 'max-w-[100vw] w-[100vw] h-[100vh] rounded-none'
             : 'max-w-[95vw] w-[95vw] h-[90vh]'
         }`}>
           <DialogHeader className="p-3 pb-2 border-b shrink-0 bg-white text-gray-900">
             <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-lg font-bold text-gray-900">📄 ตัวอย่าง PDF</span>
-              
-              {/* Zoom & Fullscreen Controls */}
               <div className="flex items-center gap-2">
-                {/* Zoom Controls */}
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setPdfZoom(prev => Math.max(50, prev - 25))}
-                    disabled={pdfZoom <= 50}
-                    className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setPdfZoom(prev => Math.max(50, prev - 25))} disabled={pdfZoom <= 50} className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200">
                     <ZoomOut className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
-                    {pdfZoom}%
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setPdfZoom(prev => Math.min(200, prev + 25))}
-                    disabled={pdfZoom >= 200}
-                    className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200"
-                  >
+                  <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">{pdfZoom}%</span>
+                  <Button variant="ghost" size="sm" onClick={() => setPdfZoom(prev => Math.min(200, prev + 25))} disabled={pdfZoom >= 200} className="h-7 w-7 p-0 text-gray-700 hover:bg-gray-200">
                     <ZoomIn className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                {/* Fullscreen Toggle */}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setPdfFullscreen(prev => !prev)}
-                  className="h-8 gap-1 text-gray-700 border-gray-300 hover:bg-gray-100"
-                >
-                  {pdfFullscreen ? (
-                    <>
-                      <Minimize2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">ย่อ</span>
-                    </>
-                  ) : (
-                    <>
-                      <Maximize2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">เต็มจอ</span>
-                    </>
-                  )}
+                <Button variant="outline" size="sm" onClick={() => setPdfFullscreen(prev => !prev)} className="h-8 gap-1 text-gray-700 border-gray-300 hover:bg-gray-100">
+                  {pdfFullscreen ? <><Minimize2 className="h-4 w-4" /><span className="hidden sm:inline">ย่อ</span></> : <><Maximize2 className="h-4 w-4" /><span className="hidden sm:inline">เต็มจอ</span></>}
                 </Button>
-                
-                {/* Download Button */}
-                <Button onClick={downloadPDFFromPreview} size="sm" className="h-8 gap-1 gradient-emerald">
+                <Button onClick={downloadPDFFromPreview} size="sm" className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Download className="h-4 w-4" />
                   <span className="hidden sm:inline">ดาวน์โหลด</span>
                 </Button>
               </div>
             </DialogTitle>
           </DialogHeader>
-          
-          {/* Scrollable container with fixed minimum width - prevents responsive squeezing */}
           <div className="flex-1 min-h-0 overflow-auto bg-white">
-            <div 
-              className="h-full p-4"
-              style={{ 
-                minWidth: `${1000 * (pdfZoom / 100)}px`,
-                transform: `scale(${pdfZoom / 100})`,
-                transformOrigin: 'top left',
-                width: `${100 / (pdfZoom / 100)}%`,
-              }}
-            >
+            <div className="h-full p-4" style={{ minWidth: `${1000 * (pdfZoom / 100)}px`, transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top left', width: `${100 / (pdfZoom / 100)}%` }}>
               {pdfPreviewUrl ? (
-                <object
-                  data={pdfPreviewUrl}
-                  type="application/pdf"
-                  className="w-full rounded-lg border border-gray-300 bg-white"
-                  style={{ height: `${100 / (pdfZoom / 100)}%`, minHeight: '100%' }}
-                >
-                  {/* Fallback for browsers that don't support object PDF */}
+                <object data={pdfPreviewUrl} type="application/pdf" className="w-full rounded-lg border border-gray-300 bg-white" style={{ height: `${100 / (pdfZoom / 100)}%`, minHeight: '100%' }}>
                   <div className="flex flex-col items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-300 py-16">
                     <FileText className="h-16 w-16 text-gray-400 mb-4" />
                     <p className="text-lg font-medium mb-2 text-gray-900">เบราว์เซอร์ไม่รองรับการแสดง PDF</p>
-                    <p className="text-gray-500 mb-4">กรุณาดาวน์โหลดไฟล์เพื่อดู</p>
-                    <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 gradient-emerald">
+                    <Button onClick={downloadPDFFromPreview} size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                       <Download className="h-5 w-5" />
                       ดาวน์โหลด PDF
                     </Button>

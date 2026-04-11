@@ -13,6 +13,7 @@ import {
   BarChart3,
   PlusCircle,
   BookOpen,
+  LineChart,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -250,6 +251,36 @@ export default function Dashboard() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Chart Analysis Quick Access */}
+      <Card className="glass-card border-emerald-800/40">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <LineChart className="h-5 w-5 text-primary" />
+            📊 วิเคราะห์กราฟ
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-primary border-emerald-700/50 hover:bg-emerald-900/30"
+            onClick={() => navigate("/chart-analysis")}
+          >
+            เปิดตาราง
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            ตารางปากกาเขียว — บันทึก Sig, TP, กรอบวัน ทุก Timeframe พร้อม Timeline รายชั่วโมง
+          </p>
+          <Button
+            onClick={() => navigate("/chart-analysis")}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+          >
+            <LineChart className="h-4 w-4" />
+            บันทึกการวิเคราะห์วันนี้
+          </Button>
         </CardContent>
       </Card>
 

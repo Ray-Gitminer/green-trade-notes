@@ -372,7 +372,7 @@ export default function ChartAnalysis() {
 
   // TP auto-calculation config
   const TP_OFFSETS: Record<string, { tp1: number; tp2?: number }> = {
-    mn: { tp1: 3000 },
+    mn: { tp1: 300 },
     w: { tp1: 150, tp2: 300 },
     d: { tp1: 50, tp2: 100 },
     h4: { tp1: 15, tp2: 30 },

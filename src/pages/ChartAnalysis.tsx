@@ -557,13 +557,13 @@ export default function ChartAnalysis() {
         { name: "H1", signal: log.h1_signal || "-", pattern: (log as any).h1_pattern || "-", structure: log.h1_market_structure || "-", tp1: (log as any).h1_tp1 || "", tp2: (log as any).h1_tp2 || "", checkpoint: (log as any).h1_checkpoint || "-" },
       ];
 
-      const colWidths = { tf: 14, signal: 14, pattern: 22, details: 38, tp: 44, checkpoint: 18 };
-      const srColWidth = contentWidth - colWidths.tf - colWidths.signal - colWidths.pattern - colWidths.details - colWidths.tp - colWidths.checkpoint;
+      const colWidths = { tf: 14, signal: 14, pattern: 22, details: 42, tp: 48, checkpoint: 20 };
+      const tableWidth = colWidths.tf + colWidths.signal + colWidths.pattern + colWidths.details + colWidths.tp + colWidths.checkpoint;
       const rowHeight = 10;
 
       // Header
       doc.setFillColor(40, 60, 45);
-      doc.rect(margin, yPos, contentWidth, lineHeight + 2, "F");
+      doc.rect(margin, yPos, tableWidth, lineHeight + 2, "F");
       doc.setFont("Sarabun", "bold");
       doc.setFontSize(smallFontSize - 1);
       doc.setTextColor(255, 255, 255);
@@ -579,8 +579,6 @@ export default function ChartAnalysis() {
       doc.text("Take Profit", xPos, yPos + lineHeight - 1);
       xPos += colWidths.tp;
       doc.text("จุดเช็ค", xPos, yPos + lineHeight - 1);
-      xPos += colWidths.checkpoint;
-      doc.text("กรอบวัน", xPos, yPos + lineHeight - 1);
       yPos += lineHeight + 3;
       doc.setTextColor(0, 0, 0);
 
@@ -591,10 +589,10 @@ export default function ChartAnalysis() {
 
         if (i % 2 === 0) {
           doc.setFillColor(248, 248, 248);
-          doc.rect(margin, yPos, contentWidth, dynamicHeight, "F");
+          doc.rect(margin, yPos, tableWidth, dynamicHeight, "F");
         }
         doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, yPos, contentWidth, dynamicHeight, "S");
+        doc.rect(margin, yPos, tableWidth, dynamicHeight, "S");
 
         xPos = margin + 2;
         const centerY = yPos + dynamicHeight / 2 + 1.5;
@@ -631,28 +629,49 @@ export default function ChartAnalysis() {
 
         // Checkpoint
         doc.text(tf.checkpoint, xPos, centerY);
-        xPos += colWidths.checkpoint;
-
-        // กรอบวัน - show in first row only, spanning visually
-        if (i === 0) {
-          const srX = xPos;
-          doc.setFont("Sarabun", "bold");
-          doc.setFontSize(smallFontSize - 2);
-          doc.text("ต้านหลัก", srX, yPos + 4);
-          doc.setFont("Sarabun", "normal");
-          doc.text(log.main_resistance || "-", srX, yPos + 8);
-          doc.setFont("Sarabun", "bold");
-          doc.text("รับต้านย่อย", srX, yPos + 13);
-          doc.setFont("Sarabun", "normal");
-          doc.text(log.minor_sr || "-", srX, yPos + 17);
-          doc.setFont("Sarabun", "bold");
-          doc.text("รับหลัก", srX, yPos + 22);
-          doc.setFont("Sarabun", "normal");
-          doc.text(log.main_support || "-", srX, yPos + 26);
-        }
 
         yPos += dynamicHeight;
       }
+
+      // กรอบวัน - 3 columns below table
+      yPos += 3;
+      const srBoxWidth = tableWidth / 3;
+      const srBoxHeight = 14;
+      const srLabels = [
+        { label: "ต้านหลัก", value: log.main_resistance || "-", color: [16, 185, 129] },
+        { label: "รับต้านย่อย", value: log.minor_sr || "-", color: [234, 179, 8] },
+        { label: "รับหลัก", value: log.main_support || "-", color: [16, 185, 129] },
+      ];
+      
+      // Header row
+      doc.setFillColor(40, 60, 45);
+      doc.rect(margin, yPos, tableWidth, lineHeight + 2, "F");
+      doc.setFont("Sarabun", "bold");
+      doc.setFontSize(smallFontSize - 1);
+      doc.setTextColor(255, 255, 255);
+      for (let i = 0; i < srLabels.length; i++) {
+        const cx = margin + i * srBoxWidth + srBoxWidth / 2;
+        doc.text(srLabels[i].label, cx, yPos + lineHeight - 1, { align: "center" });
+      }
+      yPos += lineHeight + 2;
+
+      // Value row
+      doc.setFillColor(248, 248, 248);
+      doc.rect(margin, yPos, tableWidth, srBoxHeight, "F");
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(margin, yPos, tableWidth, srBoxHeight, "S");
+      for (let i = 0; i < srLabels.length; i++) {
+        if (i > 0) {
+          doc.line(margin + i * srBoxWidth, yPos, margin + i * srBoxWidth, yPos + srBoxHeight);
+        }
+        const cx = margin + i * srBoxWidth + srBoxWidth / 2;
+        doc.setFont("Sarabun", "bold");
+        doc.setFontSize(baseFontSize);
+        doc.setTextColor(srLabels[i].color[0], srLabels[i].color[1], srLabels[i].color[2]);
+        doc.text(srLabels[i].value, cx, yPos + srBoxHeight / 2 + 2, { align: "center" });
+      }
+      doc.setTextColor(0, 0, 0);
+      yPos += srBoxHeight;
 
       yPos += 4;
 

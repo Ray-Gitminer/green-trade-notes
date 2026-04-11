@@ -20,18 +20,21 @@ export type Database = {
           d_checkpoint: string | null
           d_image_url: string | null
           d_market_structure: string | null
+          d_pattern: string | null
           d_signal: string | null
           d_tp1: string | null
           d_tp2: string | null
           h1_checkpoint: string | null
           h1_image_url: string | null
           h1_market_structure: string | null
+          h1_pattern: string | null
           h1_signal: string | null
           h1_tp1: string | null
           h1_tp2: string | null
           h4_checkpoint: string | null
           h4_image_url: string | null
           h4_market_structure: string | null
+          h4_pattern: string | null
           h4_signal: string | null
           h4_tp1: string | null
           h4_tp2: string | null
@@ -43,6 +46,7 @@ export type Database = {
           mn_checkpoint: string | null
           mn_image_url: string | null
           mn_market_structure: string | null
+          mn_pattern: string | null
           mn_signal: string | null
           mn_tp1: string | null
           mn_tp2: string | null
@@ -51,6 +55,7 @@ export type Database = {
           w_checkpoint: string | null
           w_image_url: string | null
           w_market_structure: string | null
+          w_pattern: string | null
           w_signal: string | null
           w_tp1: string | null
           w_tp2: string | null
@@ -60,18 +65,21 @@ export type Database = {
           d_checkpoint?: string | null
           d_image_url?: string | null
           d_market_structure?: string | null
+          d_pattern?: string | null
           d_signal?: string | null
           d_tp1?: string | null
           d_tp2?: string | null
           h1_checkpoint?: string | null
           h1_image_url?: string | null
           h1_market_structure?: string | null
+          h1_pattern?: string | null
           h1_signal?: string | null
           h1_tp1?: string | null
           h1_tp2?: string | null
           h4_checkpoint?: string | null
           h4_image_url?: string | null
           h4_market_structure?: string | null
+          h4_pattern?: string | null
           h4_signal?: string | null
           h4_tp1?: string | null
           h4_tp2?: string | null
@@ -83,6 +91,7 @@ export type Database = {
           mn_checkpoint?: string | null
           mn_image_url?: string | null
           mn_market_structure?: string | null
+          mn_pattern?: string | null
           mn_signal?: string | null
           mn_tp1?: string | null
           mn_tp2?: string | null
@@ -91,6 +100,7 @@ export type Database = {
           w_checkpoint?: string | null
           w_image_url?: string | null
           w_market_structure?: string | null
+          w_pattern?: string | null
           w_signal?: string | null
           w_tp1?: string | null
           w_tp2?: string | null
@@ -100,18 +110,21 @@ export type Database = {
           d_checkpoint?: string | null
           d_image_url?: string | null
           d_market_structure?: string | null
+          d_pattern?: string | null
           d_signal?: string | null
           d_tp1?: string | null
           d_tp2?: string | null
           h1_checkpoint?: string | null
           h1_image_url?: string | null
           h1_market_structure?: string | null
+          h1_pattern?: string | null
           h1_signal?: string | null
           h1_tp1?: string | null
           h1_tp2?: string | null
           h4_checkpoint?: string | null
           h4_image_url?: string | null
           h4_market_structure?: string | null
+          h4_pattern?: string | null
           h4_signal?: string | null
           h4_tp1?: string | null
           h4_tp2?: string | null
@@ -123,6 +136,7 @@ export type Database = {
           mn_checkpoint?: string | null
           mn_image_url?: string | null
           mn_market_structure?: string | null
+          mn_pattern?: string | null
           mn_signal?: string | null
           mn_tp1?: string | null
           mn_tp2?: string | null
@@ -131,6 +145,7 @@ export type Database = {
           w_checkpoint?: string | null
           w_image_url?: string | null
           w_market_structure?: string | null
+          w_pattern?: string | null
           w_signal?: string | null
           w_tp1?: string | null
           w_tp2?: string | null

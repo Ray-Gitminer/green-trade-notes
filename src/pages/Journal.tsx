@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { format } from "date-fns";
-import { BookOpen, Plus, AlertTriangle, Trash2, FileDown } from "lucide-react";
+import { BookOpen, Plus, AlertTriangle, Trash2, FileDown, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { exportJournalPDF } from "@/utils/journalPdfExport";
 

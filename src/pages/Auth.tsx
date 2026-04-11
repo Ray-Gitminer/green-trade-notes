@@ -237,7 +237,6 @@ export default function Auth() {
     </div>
   );
 }
-  const { user, signIn, signUp } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();

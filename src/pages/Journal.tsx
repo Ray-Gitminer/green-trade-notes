@@ -119,7 +119,9 @@ export default function Journal() {
 
   const conditionsText = (conditions: any) => {
     if (!conditions || typeof conditions !== "object") return "-";
-    return ENTRY_CONDITIONS.filter(c => conditions[c.key]).map(c => c.label).join(", ") || "-";
+    const labels = ENTRY_CONDITIONS.filter(c => conditions[c.key]).map(c => c.label);
+    if (conditions.other) labels.push(`อื่นๆ: ${conditions.other}`);
+    return labels.join(", ") || "-";
   };
 
   return (

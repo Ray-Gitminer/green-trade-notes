@@ -33,7 +33,8 @@ const SESSION_LABEL: Record<string, string> = {
 
 const defaultForm = {
   trade_date: format(new Date(), "yyyy-MM-dd"),
-  entry_conditions: { break_m5: false, daily_frame: false, sw_frame: false, sig: false },
+  entry_conditions: { break_m5: false, daily_frame: false, sw_frame: false, sig: false, ath_frame: false },
+  entry_conditions_other: "",
   trading_session: "",
   lot_size: "",
   trade_type: "buy" as "buy" | "sell",

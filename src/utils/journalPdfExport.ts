@@ -99,7 +99,7 @@ export async function exportJournalPDF(trades: any[]) {
     { content: "", colSpan: 2 },
   ]];
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: tableStartY,
     head,
     body,

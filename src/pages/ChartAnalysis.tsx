@@ -654,16 +654,7 @@ export default function ChartAnalysis() {
         yPos += dynamicHeight;
       }
 
-      yPos += 2;
-
-      // S/R
-      doc.setFont("Sarabun", "bold");
-      doc.setFontSize(smallFontSize);
-      doc.text("กรอบวัน:", margin, yPos);
-      doc.setFont("Sarabun", "normal");
-      const srLine = `ต้านหลัก: ${log.main_resistance || "-"}  |  รับต้านย่อย: ${log.minor_sr || "-"}  |  รับหลัก: ${log.main_support || "-"}`;
-      doc.text(srLine, margin + 22, yPos);
-      yPos += lineHeight + 4;
+      yPos += 4;
 
       // Sessions
       const sessions = log.chart_analysis_sessions || [];

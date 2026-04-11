@@ -78,6 +78,11 @@ export default function Journal() {
   const handleSubmit = async () => {
     if (!user) return;
     setSaving(true);
+    const confidenceVal = form.confidence_level ? Math.min(100, Math.max(0, parseInt(form.confidence_level))) : null;
+    const conditions = {
+      ...form.entry_conditions,
+      ...(form.entry_conditions_other ? { other: form.entry_conditions_other } : {}),
+    };
     const { error } = await supabase.from("trades").insert({
       user_id: user.id,
       pair: form.pair,
@@ -89,8 +94,8 @@ export default function Journal() {
       lot_size: form.lot_size ? parseFloat(form.lot_size) : null,
       profit_loss: form.profit_loss ? parseFloat(form.profit_loss) : null,
       emotional_state: form.emotional_state || null,
-      confidence_level: form.confidence_level ? parseInt(form.confidence_level) : null,
-      entry_conditions: form.entry_conditions,
+      confidence_level: confidenceVal,
+      entry_conditions: conditions,
       trading_session: form.trading_session || null,
       status: "closed",
     } as any);

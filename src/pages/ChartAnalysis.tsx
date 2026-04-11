@@ -550,14 +550,15 @@ export default function ChartAnalysis() {
       yPos += lineHeight + 3;
 
       const timeframes = [
-        { name: "MN", signal: log.mn_signal || "-", structure: log.mn_market_structure || "-", tp1: (log as any).mn_tp1 || "", tp2: (log as any).mn_tp2 || "" },
-        { name: "W", signal: log.w_signal || "-", structure: log.w_market_structure || "-", tp1: (log as any).w_tp1 || "", tp2: (log as any).w_tp2 || "" },
-        { name: "D", signal: log.d_signal || "-", structure: log.d_market_structure || "-", tp1: (log as any).d_tp1 || "", tp2: (log as any).d_tp2 || "" },
-        { name: "H4", signal: log.h4_signal || "-", structure: log.h4_market_structure || "-", tp1: (log as any).h4_tp1 || "", tp2: (log as any).h4_tp2 || "" },
-        { name: "H1", signal: log.h1_signal || "-", structure: log.h1_market_structure || "-", tp1: (log as any).h1_tp1 || "", tp2: (log as any).h1_tp2 || "" },
+        { name: "MN", signal: log.mn_signal || "-", pattern: (log as any).mn_pattern || "-", structure: log.mn_market_structure || "-", tp1: (log as any).mn_tp1 || "", tp2: (log as any).mn_tp2 || "", checkpoint: (log as any).mn_checkpoint || "-" },
+        { name: "W", signal: log.w_signal || "-", pattern: (log as any).w_pattern || "-", structure: log.w_market_structure || "-", tp1: (log as any).w_tp1 || "", tp2: (log as any).w_tp2 || "", checkpoint: (log as any).w_checkpoint || "-" },
+        { name: "D", signal: log.d_signal || "-", pattern: (log as any).d_pattern || "-", structure: log.d_market_structure || "-", tp1: (log as any).d_tp1 || "", tp2: (log as any).d_tp2 || "", checkpoint: (log as any).d_checkpoint || "-" },
+        { name: "H4", signal: log.h4_signal || "-", pattern: (log as any).h4_pattern || "-", structure: log.h4_market_structure || "-", tp1: (log as any).h4_tp1 || "", tp2: (log as any).h4_tp2 || "", checkpoint: (log as any).h4_checkpoint || "-" },
+        { name: "H1", signal: log.h1_signal || "-", pattern: (log as any).h1_pattern || "-", structure: log.h1_market_structure || "-", tp1: (log as any).h1_tp1 || "", tp2: (log as any).h1_tp2 || "", checkpoint: (log as any).h1_checkpoint || "-" },
       ];
 
-      const colWidths = { tf: 16, signal: 18, details: contentWidth - 16 - 18 - 24 - 24, tp: 24, chart: 24 };
+      const colWidths = { tf: 14, signal: 14, pattern: 22, details: 38, tp: 44, checkpoint: 18 };
+      const srColWidth = contentWidth - colWidths.tf - colWidths.signal - colWidths.pattern - colWidths.details - colWidths.tp - colWidths.checkpoint;
       const rowHeight = 10;
 
       // Header
@@ -571,9 +572,15 @@ export default function ChartAnalysis() {
       xPos += colWidths.tf;
       doc.text("Sig", xPos, yPos + lineHeight - 1);
       xPos += colWidths.signal;
+      doc.text("Pattern", xPos, yPos + lineHeight - 1);
+      xPos += colWidths.pattern;
       doc.text("ไส้หลัง Sig", xPos, yPos + lineHeight - 1);
       xPos += colWidths.details;
-      doc.text("TP", xPos, yPos + lineHeight - 1);
+      doc.text("Take Profit", xPos, yPos + lineHeight - 1);
+      xPos += colWidths.tp;
+      doc.text("จุดเช็ค", xPos, yPos + lineHeight - 1);
+      xPos += colWidths.checkpoint;
+      doc.text("กรอบวัน", xPos, yPos + lineHeight - 1);
       yPos += lineHeight + 3;
       doc.setTextColor(0, 0, 0);
 
@@ -596,6 +603,7 @@ export default function ChartAnalysis() {
         doc.text(tf.name, xPos, centerY);
         xPos += colWidths.tf;
 
+        // Signal with color
         doc.setFont("Sarabun", "normal");
         if (tf.signal === "Buy") doc.setTextColor(16, 185, 129);
         else if (tf.signal === "Sell") doc.setTextColor(220, 38, 38);
@@ -604,6 +612,11 @@ export default function ChartAnalysis() {
         doc.setTextColor(0, 0, 0);
         xPos += colWidths.signal;
 
+        // Pattern
+        doc.text(tf.pattern, xPos, centerY);
+        xPos += colWidths.pattern;
+
+        // ไส้หลัง Sig (details)
         let detailsY = yPos + 4;
         for (const line of wrappedLines) {
           doc.text(line, xPos, detailsY + 3);
@@ -611,8 +624,32 @@ export default function ChartAnalysis() {
         }
         xPos += colWidths.details;
 
+        // TP
         doc.text(tf.tp1 ? `TP1: ${tf.tp1}` : "-", xPos, centerY - 2);
         if (tf.tp2) doc.text(`TP2: ${tf.tp2}`, xPos, centerY + 2);
+        xPos += colWidths.tp;
+
+        // Checkpoint
+        doc.text(tf.checkpoint, xPos, centerY);
+        xPos += colWidths.checkpoint;
+
+        // กรอบวัน - show in first row only, spanning visually
+        if (i === 0) {
+          const srX = xPos;
+          doc.setFont("Sarabun", "bold");
+          doc.setFontSize(smallFontSize - 2);
+          doc.text("ต้านหลัก", srX, yPos + 4);
+          doc.setFont("Sarabun", "normal");
+          doc.text(log.main_resistance || "-", srX, yPos + 8);
+          doc.setFont("Sarabun", "bold");
+          doc.text("รับต้านย่อย", srX, yPos + 13);
+          doc.setFont("Sarabun", "normal");
+          doc.text(log.minor_sr || "-", srX, yPos + 17);
+          doc.setFont("Sarabun", "bold");
+          doc.text("รับหลัก", srX, yPos + 22);
+          doc.setFont("Sarabun", "normal");
+          doc.text(log.main_support || "-", srX, yPos + 26);
+        }
 
         yPos += dynamicHeight;
       }

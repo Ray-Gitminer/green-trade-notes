@@ -157,6 +157,7 @@ export default function Journal() {
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
           </Button>
         </div>
+      </div>
 
       {/* Alert / Reminders */}
       <Card className="border-yellow-600/50 bg-yellow-950/20">

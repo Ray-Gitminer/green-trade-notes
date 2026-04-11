@@ -675,67 +675,102 @@ export default function ChartAnalysis() {
 
       yPos += 4;
 
-      // Sessions
+      // Sessions - render each as atomic card (no splitting across pages)
       const sessions = log.chart_analysis_sessions || [];
       const sessionTimes = ["07:00", "11:00", "15:00", "19:00"];
+
+      const imgWidth = (contentWidth - 6) / 2;
+      const imgHeight = imgWidth * 0.6;
+      const headerH = lineHeight + 4;
+
+      // Pre-load all session images in parallel
+      const sessionImageData: Record<string, { h1: string | null; h4: string | null }> = {};
+      await Promise.all(sessionTimes.map(async (sessionTime) => {
+        const session = sessions.find((s: any) => s.session_time === sessionTime);
+        if (!session) return;
+        const [h1Data, h4Data] = await Promise.all([
+          session.h1_image_url ? loadImageAsBase64(session.h1_image_url) : Promise.resolve(null),
+          session.h4_image_url ? loadImageAsBase64(session.h4_image_url) : Promise.resolve(null),
+        ]);
+        sessionImageData[sessionTime] = { h1: h1Data, h4: h4Data };
+      }));
 
       for (const sessionTime of sessionTimes) {
         const session = sessions.find((s: any) => s.session_time === sessionTime);
         const hasContent = session?.h4_analysis || session?.h1_analysis || session?.chart_notes || session?.h1_image_url || session?.h4_image_url;
         if (!hasContent) continue;
 
-        yPos = checkPageBreak(yPos, 40);
+        // Estimate total card height
+        let cardHeight = headerH; // header
+        let noteLines: string[] = [];
+        if (session?.chart_notes) {
+          doc.setFont("Sarabun", "normal");
+          doc.setFontSize(smallFontSize - 1);
+          noteLines = doc.splitTextToSize(session.chart_notes, contentWidth - 6);
+          cardHeight += (lineHeight - 1) + noteLines.length * (lineHeight - 1) + 2; // label + lines + gap
+        }
+        const hasImages = session?.h1_image_url || session?.h4_image_url;
+        if (hasImages) {
+          cardHeight += lineHeight + imgHeight + 2; // labels + images + gap
+        }
+        cardHeight += 6; // bottom separator + padding
+
+        // Cap image height so card fits one page; if card is too tall, allow split
+        const maxCardHeight = pageHeight - margin * 2;
+        const fitsOnePage = cardHeight <= maxCardHeight;
+
+        // Smart page break: if card fits on a page but not remaining space, start new page
+        if (fitsOnePage && yPos + cardHeight > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        // --- Draw card border/background ---
+        const cardStartY = yPos;
+        const cardBgHeight = Math.min(cardHeight, pageHeight - margin - yPos);
+        doc.setDrawColor(60, 80, 65);
+        doc.setFillColor(248, 250, 248);
+        doc.roundedRect(margin, yPos, contentWidth, fitsOnePage ? cardHeight - 4 : cardBgHeight, 2, 2, "FD");
 
         // Session header
         doc.setFillColor(40, 60, 45);
-        doc.rect(margin, yPos, contentWidth, lineHeight + 2, "F");
+        doc.roundedRect(margin, yPos, contentWidth, lineHeight + 2, 2, 2, "F");
+        // Fix bottom corners of header to be square
+        doc.setFillColor(40, 60, 45);
+        doc.rect(margin, yPos + 2, contentWidth, lineHeight, "F");
         doc.setFont("Sarabun", "bold");
         doc.setFontSize(smallFontSize);
         doc.setTextColor(255, 255, 255);
-        doc.text(`${sessionTime.replace(":", ".")} น. H1 / H4`, margin + 3, yPos + lineHeight - 1);
+        doc.text(`⏰ ${sessionTime.replace(":", ".")} น. H1 / H4`, margin + 3, yPos + lineHeight - 1);
         doc.setTextColor(0, 0, 0);
         yPos += lineHeight + 4;
 
         // Chart notes
-        if (session?.chart_notes) {
+        if (session?.chart_notes && noteLines.length > 0) {
           doc.setFont("Sarabun", "bold");
           doc.setFontSize(smallFontSize - 1);
-          doc.text("สภาพกราฟ / บันทึก:", margin + 3, yPos);
+          doc.text("📝 สภาพกราฟ / บันทึก:", margin + 3, yPos);
           yPos += lineHeight - 1;
           doc.setFont("Sarabun", "normal");
-          const noteLines = doc.splitTextToSize(session.chart_notes, contentWidth - 6);
           for (const line of noteLines) {
-            yPos = checkPageBreak(yPos, lineHeight);
-            doc.text(line, margin + 3, yPos);
+            doc.text(line, margin + 5, yPos);
             yPos += lineHeight - 1;
           }
           yPos += 2;
         }
 
         // Chart images side by side
-        const h1ImgUrl = session?.h1_image_url;
-        const h4ImgUrl = session?.h4_image_url;
-        if (h1ImgUrl || h4ImgUrl) {
-          const imgWidth = (contentWidth - 6) / 2;
-          const imgHeight = imgWidth * 0.6;
-          yPos = checkPageBreak(yPos, imgHeight + lineHeight + 4);
-
-          // Labels
+        if (hasImages) {
           doc.setFont("Sarabun", "bold");
           doc.setFontSize(smallFontSize - 1);
-          if (h1ImgUrl) doc.text("H1 Chart", margin + 3, yPos);
-          if (h4ImgUrl) doc.text("H4 Chart", margin + imgWidth + 6, yPos);
+          if (session?.h1_image_url) doc.text("H1 Chart", margin + 3, yPos);
+          if (session?.h4_image_url) doc.text("H4 Chart", margin + imgWidth + 6, yPos);
           yPos += lineHeight;
 
-          // Load and render images
-          const [h1Data, h4Data] = await Promise.all([
-            h1ImgUrl ? loadImageAsBase64(h1ImgUrl) : Promise.resolve(null),
-            h4ImgUrl ? loadImageAsBase64(h4ImgUrl) : Promise.resolve(null),
-          ]);
-
-          if (h1Data) {
-            try { doc.addImage(h1Data, "JPEG", margin + 1, yPos, imgWidth, imgHeight); } catch {}
-          } else if (h1ImgUrl) {
+          const imgData = sessionImageData[sessionTime];
+          if (imgData?.h1) {
+            try { doc.addImage(imgData.h1, "JPEG", margin + 1, yPos, imgWidth, imgHeight); } catch {}
+          } else if (session?.h1_image_url) {
             doc.setFont("Sarabun", "normal");
             doc.setFontSize(smallFontSize - 2);
             doc.setTextColor(150, 150, 150);
@@ -743,9 +778,9 @@ export default function ChartAnalysis() {
             doc.setTextColor(0, 0, 0);
           }
 
-          if (h4Data) {
-            try { doc.addImage(h4Data, "JPEG", margin + imgWidth + 5, yPos, imgWidth, imgHeight); } catch {}
-          } else if (h4ImgUrl) {
+          if (imgData?.h4) {
+            try { doc.addImage(imgData.h4, "JPEG", margin + imgWidth + 5, yPos, imgWidth, imgHeight); } catch {}
+          } else if (session?.h4_image_url) {
             doc.setFont("Sarabun", "normal");
             doc.setFontSize(smallFontSize - 2);
             doc.setTextColor(150, 150, 150);
@@ -756,8 +791,6 @@ export default function ChartAnalysis() {
           yPos += imgHeight + 2;
         }
 
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 4;
       }
     }

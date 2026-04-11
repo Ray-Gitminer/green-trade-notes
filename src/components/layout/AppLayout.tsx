@@ -44,7 +44,7 @@ const navItems = [
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -130,8 +130,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </ScrollArea>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border bg-sidebar">
-          <div className="text-xs text-muted-foreground mb-3 truncate">
-            {user?.email}
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar className="h-9 w-9">
+              {profile?.line_picture_url ? (
+                <AvatarImage src={profile.line_picture_url} alt="Profile" />
+              ) : null}
+              <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                {(profile?.line_display_name || profile?.display_name || user?.email || "U").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground truncate">
+                {profile?.line_display_name || profile?.display_name || "Trader"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
           </div>
           <Button
             variant="ghost"

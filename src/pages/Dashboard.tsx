@@ -44,7 +44,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [trades, setTrades] = useState<Trade[]>([]);

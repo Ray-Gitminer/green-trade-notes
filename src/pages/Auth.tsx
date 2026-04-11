@@ -7,11 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo.png";
 
-const authSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
 const LINE_CHANNEL_ID = "2009773284";
 
 export default function Auth() {

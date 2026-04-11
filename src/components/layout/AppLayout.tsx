@@ -32,13 +32,9 @@ interface AppLayoutProps {
 
 const navItems = [
   { path: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
-  { path: "/new-trade", labelKey: "nav.newTrade", icon: PlusCircle },
   { path: "/chart-analysis", labelKey: "nav.chartAnalysis", icon: LineChart },
   { path: "/journal", labelKey: "nav.journal", icon: BookOpen },
   { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
-  { path: "/templates", labelKey: "nav.templates", icon: FileStack },
-  { path: "/backtesting", labelKey: "nav.backtesting", icon: FlaskConical },
-  { path: "/risk-journal", labelKey: "nav.riskJournal", icon: Brain },
   { path: "/goals", labelKey: "nav.goals", icon: Target },
   { path: "/notes", labelKey: "nav.notes", icon: FileText },
   { path: "/knowledge", labelKey: "nav.knowledge", icon: Library },

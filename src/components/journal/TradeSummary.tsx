@@ -177,15 +177,27 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {strategyData.map(s => (
-                <div key={s.name} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                  <div>
-                    <p className="font-medium text-sm">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">ใช้ {s.count} ครั้ง ({s.pct}%) | Win Rate: {s.winRate}%</p>
+              {strategyData.map((s, i) => (
+                <div key={s.name} className="p-3 rounded-lg bg-secondary/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground">#{i + 1}</span>
+                      <p className="font-medium text-sm">{s.name}</p>
+                    </div>
+                    <p className={`font-bold text-sm ${s.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {s.profit >= 0 ? "+" : ""}${s.profit.toFixed(2)}
+                    </p>
                   </div>
-                  <p className={`font-bold text-sm ${s.profit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {s.profit >= 0 ? "+" : ""}${s.profit.toFixed(2)}
-                  </p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                    <span>ใช้ {s.count} ครั้ง ({s.pct}%)</span>
+                    <span>Win Rate: {s.winRate}%</span>
+                  </div>
+                  <div className="w-full bg-secondary/50 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(parseFloat(s.winRate), 100)}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

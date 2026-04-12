@@ -143,6 +143,71 @@ function drawProgressBar(doc: jsPDF, x: number, y: number, w: number, h: number,
   }
 }
 
+const PIE_COLORS: [number, number, number][] = [
+  [16, 185, 129], [59, 130, 246], [245, 158, 11], [239, 68, 68],
+  [139, 92, 246], [236, 72, 153], [20, 184, 166], [249, 115, 22],
+];
+
+function drawPieChart(doc: jsPDF, cx: number, cy: number, radius: number, data: { name: string; pct: number }[]) {
+  if (data.length === 0) return;
+  let startAngle = -Math.PI / 2;
+  const total = data.reduce((s, d) => s + d.pct, 0) || 1;
+
+  data.forEach((d, i) => {
+    const sliceAngle = (d.pct / total) * 2 * Math.PI;
+    const endAngle = startAngle + sliceAngle;
+    const color = PIE_COLORS[i % PIE_COLORS.length];
+
+    // Draw filled sector using small triangles
+    doc.setFillColor(...color);
+    doc.setDrawColor(...color);
+    const steps = Math.max(Math.ceil(sliceAngle / 0.05), 2);
+    const angleStep = sliceAngle / steps;
+    for (let j = 0; j < steps; j++) {
+      const a1 = startAngle + j * angleStep;
+      const a2 = startAngle + (j + 1) * angleStep;
+      const x1 = cx + Math.cos(a1) * radius;
+      const y1 = cy + Math.sin(a1) * radius;
+      const x2 = cx + Math.cos(a2) * radius;
+      const y2 = cy + Math.sin(a2) * radius;
+      doc.triangle(cx, cy, x1, y1, x2, y2, "F");
+    }
+
+    // Inner hole (donut)
+    // drawn after all slices
+
+    // Label line
+    const midAngle = startAngle + sliceAngle / 2;
+    const labelR = radius + 5;
+    const lx = cx + Math.cos(midAngle) * labelR;
+    const ly = cy + Math.sin(midAngle) * labelR;
+
+    doc.setFontSize(6);
+    doc.setFont("Sarabun", "normal");
+    doc.setTextColor(200, 210, 205);
+    const align = lx > cx ? "left" : "right";
+    doc.text(`${d.name} (${d.pct.toFixed(1)}%)`, lx + (lx > cx ? 1 : -1), ly + 1, { align: align as any });
+
+    startAngle = endAngle;
+  });
+
+  // Draw donut hole
+  doc.setFillColor(22, 33, 28);
+  const innerR = radius * 0.4;
+  // approximate circle with many triangles
+  const circSteps = 40;
+  for (let i = 0; i < circSteps; i++) {
+    const a1 = (i / circSteps) * 2 * Math.PI;
+    const a2 = ((i + 1) / circSteps) * 2 * Math.PI;
+    doc.triangle(
+      cx, cy,
+      cx + Math.cos(a1) * innerR, cy + Math.sin(a1) * innerR,
+      cx + Math.cos(a2) * innerR, cy + Math.sin(a2) * innerR,
+      "F"
+    );
+  }
+}
+
 function drawMiniLineChart(doc: jsPDF, x: number, y: number, w: number, h: number, data: { value: number }[]) {
   if (data.length < 2) return;
   const vals = data.map(d => d.value);
@@ -296,9 +361,13 @@ export async function exportJournalPDF(trades: any[]) {
     doc.text("ยังไม่มีข้อมูล", col1X + colW / 2, sessBoxY + 20, { align: "center" });
   }
 
-  // ── RIGHT COLUMN: Strategy Breakdown ──
+  // ── RIGHT COLUMN: Strategy Breakdown (top) + Pie Chart (bottom) ──
   const stratBoxY = chartBoxY;
-  const stratBoxH = pageH - stratBoxY - margin - 5;
+  // Calculate how much space strategies need
+  const maxStratItems = Math.min(strategies.length, 5); // show max 5 in compact mode
+  const stratItemH = 14;
+  const stratListH = maxStratItems * (stratItemH + 3) + 15;
+  const stratBoxH = Math.min(stratListH, 90);
   drawRoundedRect(doc, col2X, stratBoxY, colW, stratBoxH, 2, [22, 33, 28]);
 
   doc.setFontSize(9);
@@ -308,43 +377,58 @@ export async function exportJournalPDF(trades: any[]) {
 
   let stratY = stratBoxY + 13;
   strategies.forEach((s, i) => {
-    if (stratY + 16 > pageH - margin) return; // safety
-    drawRoundedRect(doc, col2X + 4, stratY, colW - 8, 14, 2, [30, 42, 36]);
+    if (stratY + 16 > stratBoxY + stratBoxH - 2) return;
+    drawRoundedRect(doc, col2X + 4, stratY, colW - 8, stratItemH, 2, [30, 42, 36]);
 
-    // rank
     doc.setFontSize(7);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(130, 140, 135);
     doc.text(`#${i + 1}`, col2X + 7, stratY + 5);
 
-    // name
     doc.setFontSize(8);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(220, 230, 225);
     doc.text(s.name, col2X + 15, stratY + 5);
 
-    // profit on right
     const profitColor: [number, number, number] = s.profit >= 0 ? [52, 211, 153] : [248, 113, 113];
     doc.setFontSize(8);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(...profitColor);
     doc.text(`${s.profit >= 0 ? "+" : ""}$${s.profit.toFixed(2)}`, col2X + colW - 7, stratY + 5, { align: "right" });
 
-    // sub info
     doc.setFontSize(6.5);
     doc.setFont("Sarabun", "normal");
     doc.setTextColor(130, 140, 135);
     doc.text(`ใช้ ${s.count} ครั้ง (${s.pct.toFixed(1)}%)  |  Win Rate: ${s.winRate.toFixed(1)}%`, col2X + 7, stratY + 10);
 
-    // progress bar
     drawProgressBar(doc, col2X + 7, stratY + 11.5, colW - 18, 1.5, s.winRate);
-
-    stratY += 17;
+    stratY += stratItemH + 3;
   });
   if (strategies.length === 0) {
     doc.setFontSize(8);
     doc.setTextColor(130, 140, 135);
     doc.text("ยังไม่มีข้อมูล", col2X + colW / 2, stratBoxY + 25, { align: "center" });
+  }
+
+  // ── Pie Chart: สัดส่วนกลยุทธ์ ──
+  const pieBoxY = stratBoxY + stratBoxH + 4;
+  const pieBoxH = pageH - pieBoxY - margin - 5;
+  drawRoundedRect(doc, col2X, pieBoxY, colW, pieBoxH, 2, [22, 33, 28]);
+
+  doc.setFontSize(9);
+  doc.setFont("Sarabun", "bold");
+  doc.setTextColor(16, 185, 129);
+  doc.text("📊 สัดส่วนกลยุทธ์", col2X + 4, pieBoxY + 7);
+
+  if (strategies.length > 0) {
+    const pieRadius = Math.min((pieBoxH - 16) / 2, 22);
+    const pieCx = col2X + colW / 2;
+    const pieCy = pieBoxY + 10 + pieRadius + 2;
+    drawPieChart(doc, pieCx, pieCy, pieRadius, strategies.map(s => ({ name: s.name, pct: s.pct })));
+  } else {
+    doc.setFontSize(8);
+    doc.setTextColor(130, 140, 135);
+    doc.text("ยังไม่มีข้อมูล", col2X + colW / 2, pieBoxY + 25, { align: "center" });
   }
 
   // Page number

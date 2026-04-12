@@ -172,6 +172,7 @@ export default function Journal() {
     });
     setEditingId(trade.id);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
@@ -260,78 +261,14 @@ export default function Journal() {
             <FileDown className="h-4 w-4 mr-2" />
             ดาวน์โหลด PDF
           </Button>
-          <Button onClick={() => { setShowForm(!showForm); if (showForm) { setEditingId(null); setForm(defaultForm); } }} className="bg-primary hover:bg-primary/90">
+          <Button onClick={() => { const next = !showForm; setShowForm(next); if (!next) { setEditingId(null); setForm(defaultForm); } else { window.scrollTo({ top: 0, behavior: 'smooth' }); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
           </Button>
         </div>
       </div>
 
-      {/* Date Filter */}
-      {showFilter && (
-        <Card className="glass-card border-primary/30">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-end gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">วันที่เริ่มต้น</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterStartDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filterStartDate ? format(filterStartDate, "dd/MM/yyyy") : "เลือกวันที่"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={filterStartDate} onSelect={setFilterStartDate} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">วันที่สิ้นสุด</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterEndDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filterEndDate ? format(filterEndDate, "dd/MM/yyyy") : "เลือกวันที่"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={filterEndDate} onSelect={setFilterEndDate} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button variant="ghost" onClick={clearFilter} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4 mr-1" />
-                ล้างตัวกรอง
-              </Button>
-              {(filterStartDate || filterEndDate) && (
-                <span className="text-xs text-muted-foreground">
-                  แสดง {filteredTrades.length} จาก {trades.length} เทรด
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Alert / Reminders */}
-      <Card className="border-yellow-600/50 bg-yellow-950/20">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" />
-            <div className="text-sm space-y-1">
-              <p className="text-yellow-400 font-semibold">เตือนสติ</p>
-              <p className="text-yellow-300/80">• รอเทรดกราฟเมื่อเข้าเงื่อนไขเท่านั้น (รอบ กรอบ ซิก) ไม่ตรงไม่เทรด เทรดไม่เกิน 3 ครั้ง / วัน</p>
-              <p className="text-yellow-300/80">• ถ้าได้ตามเป้าพอใจกำไร <span className="text-red-400 font-bold">*****ออกตลาดได้เลย</span> เปิดกราฟ ไปทำอะไรทำ เช่น ออกกำลังกาย ทำงานบ้าน ออกไปใช้เงิน</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Trade Summary & Analytics */}
-      <TradeSummary trades={filteredTrades} />
-
-      {/* Entry Form */}
+      {/* Entry Form - at top */}
       {showForm && (
         <Card className="glass-card border-primary/30">
           <CardHeader className="pb-4">
@@ -433,6 +370,69 @@ export default function Journal() {
           </CardContent>
         </Card>
       )}
+
+      {showFilter && (
+        <Card className="glass-card border-primary/30">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">วันที่เริ่มต้น</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterStartDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterStartDate ? format(filterStartDate, "dd/MM/yyyy") : "เลือกวันที่"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterStartDate} onSelect={setFilterStartDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">วันที่สิ้นสุด</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal border-emerald-800/40", !filterEndDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterEndDate ? format(filterEndDate, "dd/MM/yyyy") : "เลือกวันที่"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterEndDate} onSelect={setFilterEndDate} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button variant="ghost" onClick={clearFilter} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4 mr-1" />
+                ล้างตัวกรอง
+              </Button>
+              {(filterStartDate || filterEndDate) && (
+                <span className="text-xs text-muted-foreground">
+                  แสดง {filteredTrades.length} จาก {trades.length} เทรด
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alert / Reminders */}
+      <Card className="border-yellow-600/50 bg-yellow-950/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" />
+            <div className="text-sm space-y-1">
+              <p className="text-yellow-400 font-semibold">เตือนสติ</p>
+              <p className="text-yellow-300/80">• รอเทรดกราฟเมื่อเข้าเงื่อนไขเท่านั้น (รอบ กรอบ ซิก) ไม่ตรงไม่เทรด เทรดไม่เกิน 3 ครั้ง / วัน</p>
+              <p className="text-yellow-300/80">• ถ้าได้ตามเป้าพอใจกำไร <span className="text-red-400 font-bold">*****ออกตลาดได้เลย</span> เปิดกราฟ ไปทำอะไรทำ เช่น ออกกำลังกาย ทำงานบ้าน ออกไปใช้เงิน</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Trade Summary & Analytics */}
+      <TradeSummary trades={filteredTrades} />
 
       {/* Journal Table */}
       <Card className="glass-card">

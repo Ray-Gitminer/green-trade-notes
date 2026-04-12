@@ -143,6 +143,71 @@ function drawProgressBar(doc: jsPDF, x: number, y: number, w: number, h: number,
   }
 }
 
+const PIE_COLORS: [number, number, number][] = [
+  [16, 185, 129], [59, 130, 246], [245, 158, 11], [239, 68, 68],
+  [139, 92, 246], [236, 72, 153], [20, 184, 166], [249, 115, 22],
+];
+
+function drawPieChart(doc: jsPDF, cx: number, cy: number, radius: number, data: { name: string; pct: number }[]) {
+  if (data.length === 0) return;
+  let startAngle = -Math.PI / 2;
+  const total = data.reduce((s, d) => s + d.pct, 0) || 1;
+
+  data.forEach((d, i) => {
+    const sliceAngle = (d.pct / total) * 2 * Math.PI;
+    const endAngle = startAngle + sliceAngle;
+    const color = PIE_COLORS[i % PIE_COLORS.length];
+
+    // Draw filled sector using small triangles
+    doc.setFillColor(...color);
+    doc.setDrawColor(...color);
+    const steps = Math.max(Math.ceil(sliceAngle / 0.05), 2);
+    const angleStep = sliceAngle / steps;
+    for (let j = 0; j < steps; j++) {
+      const a1 = startAngle + j * angleStep;
+      const a2 = startAngle + (j + 1) * angleStep;
+      const x1 = cx + Math.cos(a1) * radius;
+      const y1 = cy + Math.sin(a1) * radius;
+      const x2 = cx + Math.cos(a2) * radius;
+      const y2 = cy + Math.sin(a2) * radius;
+      doc.triangle(cx, cy, x1, y1, x2, y2, "F");
+    }
+
+    // Inner hole (donut)
+    // drawn after all slices
+
+    // Label line
+    const midAngle = startAngle + sliceAngle / 2;
+    const labelR = radius + 5;
+    const lx = cx + Math.cos(midAngle) * labelR;
+    const ly = cy + Math.sin(midAngle) * labelR;
+
+    doc.setFontSize(6);
+    doc.setFont("Sarabun", "normal");
+    doc.setTextColor(200, 210, 205);
+    const align = lx > cx ? "left" : "right";
+    doc.text(`${d.name} (${d.pct.toFixed(1)}%)`, lx + (lx > cx ? 1 : -1), ly + 1, { align: align as any });
+
+    startAngle = endAngle;
+  });
+
+  // Draw donut hole
+  doc.setFillColor(22, 33, 28);
+  const innerR = radius * 0.4;
+  // approximate circle with many triangles
+  const circSteps = 40;
+  for (let i = 0; i < circSteps; i++) {
+    const a1 = (i / circSteps) * 2 * Math.PI;
+    const a2 = ((i + 1) / circSteps) * 2 * Math.PI;
+    doc.triangle(
+      cx, cy,
+      cx + Math.cos(a1) * innerR, cy + Math.sin(a1) * innerR,
+      cx + Math.cos(a2) * innerR, cy + Math.sin(a2) * innerR,
+      "F"
+    );
+  }
+}
+
 function drawMiniLineChart(doc: jsPDF, x: number, y: number, w: number, h: number, data: { value: number }[]) {
   if (data.length < 2) return;
   const vals = data.map(d => d.value);

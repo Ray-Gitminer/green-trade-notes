@@ -54,15 +54,36 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
 
     trades.forEach(t => {
       const ec = t.entry_conditions;
-      if (!ec || typeof ec !== "object") return;
-      Object.keys(ec).forEach(key => {
-        if (ec[key] && key !== "other") {
-          const label = conditionLabels[key] || key;
-          if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
-          counts[label].count++;
-          if ((t.profit_loss || 0) > 0) counts[label].wins++;
-          counts[label].profit += (t.profit_loss || 0);
-        }
+      if (!ec || typeof ec !== "object") {
+        // ไม่ได้ระบุกลยุทธ์
+        const label = "ไม่ได้ระบุ";
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+        return;
+      }
+      const usedKeys = Object.keys(ec).filter(key => ec[key] && key !== "other");
+      if (ec.other) {
+        const label = `อื่นๆ: ${ec.other}`;
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+      }
+      if (usedKeys.length === 0 && !ec.other) {
+        const label = "ไม่ได้ระบุ";
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+      }
+      usedKeys.forEach(key => {
+        const label = conditionLabels[key] || key;
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
       });
     });
 

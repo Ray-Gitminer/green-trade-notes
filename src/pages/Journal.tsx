@@ -224,6 +224,106 @@ export default function Journal() {
     setPdfBlob(null);
   };
 
+  const handleExportImages = async () => {
+    if (!filteredTrades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
+    toast.info("กำลังสร้างรูปภาพ...");
+    try {
+      const doc = await exportJournalPDF(filteredTrades);
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        (doc as any).setPage(i);
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const scale = 2;
+        const canvas = document.createElement("canvas");
+        canvas.width = pageW * scale * (96 / 72);
+        canvas.height = pageH * scale * (96 / 72);
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#0f1714";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const imgData = doc.output("datauristring", { filename: `page-${i}.pdf` });
+        // Use jsPDF's built-in canvas output per page
+        const svgStr = (doc as any).__private__?.getPageSvg?.(i);
+        // Fallback: render full PDF as image via iframe
+      }
+      // Better approach: use pdf.js or convert via blob
+      const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Use canvas-based rendering
+      const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
+      const loadingTask = getDocument(pdfUrl);
+      const pdf = await loadingTask.promise;
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `trade-journal-${format(new Date(), "yyyy-MM-dd")}-page${i}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }, "image/png");
+      }
+      
+      URL.revokeObjectURL(pdfUrl);
+      toast.success("ส่งออกรูปภาพสำเร็จ");
+    } catch (e) { console.error(e); toast.error("สร้างรูปภาพไม่สำเร็จ"); }
+  };
+
+  const handleShareImages = async () => {
+    if (!filteredTrades.length) { toast.error("ยังไม่มีข้อมูลเทรดสำหรับส่งออก"); return; }
+    toast.info("กำลังสร้างรูปภาพสำหรับแชร์...");
+    try {
+      const doc = await exportJournalPDF(filteredTrades);
+      const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
+      const loadingTask = getDocument(pdfUrl);
+      const pdf = await loadingTask.promise;
+      
+      const files: File[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        
+        const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+        files.push(new File([blob], `trade-journal-page${i}.png`, { type: "image/png" }));
+      }
+      
+      URL.revokeObjectURL(pdfUrl);
+      
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: "บันทึกการเทรด", text: `สรุปการเทรด ${format(new Date(), "dd/MM/yyyy")}` });
+        toast.success("แชร์สำเร็จ");
+      } else {
+        toast.error("เบราว์เซอร์ไม่รองรับการแชร์ไฟล์ กรุณาดาวน์โหลดแทน");
+      }
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      console.error(e); toast.error("แชร์ไม่สำเร็จ");
+    }
+  };
+
   const clearFilter = () => {
     setFilterStartDate(undefined);
     setFilterEndDate(undefined);

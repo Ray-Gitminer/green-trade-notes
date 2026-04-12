@@ -5,6 +5,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarC
 import { TrendingUp, BarChart3, Clock, Target } from "lucide-react";
 import { format } from "date-fns";
 
+const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+
 const SESSION_LABEL: Record<string, string> = {
   asia: "เช้าเอเชีย",
   london: "บ่ายลอนดอน",
@@ -54,15 +56,36 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
 
     trades.forEach(t => {
       const ec = t.entry_conditions;
-      if (!ec || typeof ec !== "object") return;
-      Object.keys(ec).forEach(key => {
-        if (ec[key] && key !== "other") {
-          const label = conditionLabels[key] || key;
-          if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
-          counts[label].count++;
-          if ((t.profit_loss || 0) > 0) counts[label].wins++;
-          counts[label].profit += (t.profit_loss || 0);
-        }
+      if (!ec || typeof ec !== "object") {
+        // ไม่ได้ระบุกลยุทธ์
+        const label = "ไม่ได้ระบุ";
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+        return;
+      }
+      const usedKeys = Object.keys(ec).filter(key => ec[key] && key !== "other");
+      if (ec.other) {
+        const label = `อื่นๆ: ${ec.other}`;
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+      }
+      if (usedKeys.length === 0 && !ec.other) {
+        const label = "ไม่ได้ระบุ";
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
+      }
+      usedKeys.forEach(key => {
+        const label = conditionLabels[key] || key;
+        if (!counts[label]) counts[label] = { count: 0, wins: 0, profit: 0 };
+        counts[label].count++;
+        if ((t.profit_loss || 0) > 0) counts[label].wins++;
+        counts[label].profit += (t.profit_loss || 0);
       });
     });
 
@@ -201,6 +224,38 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Strategy Pie Chart */}
+      {strategyData.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />สัดส่วนกลยุทธ์
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <PieChart>
+                <Pie
+                  data={strategyData.map((s) => ({ name: s.name, value: s.count, pct: s.pct }))}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  innerRadius={40}
+                  dataKey="value"
+                  label={({ name, pct }: any) => `${name} (${pct}%)`}
+                  labelLine={true}
+                >
+                  {strategyData.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       )}

@@ -226,6 +226,38 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
         </Card>
       )}
 
+      {/* Strategy Pie Chart */}
+      {strategyData.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />สัดส่วนกลยุทธ์
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <PieChart>
+                <Pie
+                  data={strategyData.map((s) => ({ name: s.name, value: s.count, pct: s.pct }))}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  innerRadius={40}
+                  dataKey="value"
+                  label={({ name, pct }: any) => `${name} (${pct}%)`}
+                  labelLine={true}
+                >
+                  {strategyData.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Session Profitability */}
       {sessionData.length > 0 && (
         <Card className="glass-card">

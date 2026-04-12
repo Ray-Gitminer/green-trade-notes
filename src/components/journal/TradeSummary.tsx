@@ -70,9 +70,10 @@ export default function TradeSummary({ trades }: TradeSummaryProps) {
       name,
       count: data.count,
       winRate: data.count > 0 ? ((data.wins / data.count) * 100).toFixed(1) : "0",
+      winRateNum: data.count > 0 ? (data.wins / data.count) * 100 : 0,
       profit: data.profit,
       pct: stats.totalTrades > 0 ? ((data.count / stats.totalTrades) * 100).toFixed(1) : "0",
-    }));
+    })).sort((a, b) => b.winRateNum - a.winRateNum);
   }, [trades, stats.totalTrades]);
 
   // Session profitability

@@ -260,7 +260,7 @@ export default function Journal() {
             <FileDown className="h-4 w-4 mr-2" />
             ดาวน์โหลด PDF
           </Button>
-          <Button onClick={() => { setShowForm(!showForm); if (showForm) { setEditingId(null); setForm(defaultForm); } }} className="bg-primary hover:bg-primary/90">
+          <Button onClick={() => { const next = !showForm; setShowForm(next); if (!next) { setEditingId(null); setForm(defaultForm); } else { window.scrollTo({ top: 0, behavior: 'smooth' }); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
           </Button>

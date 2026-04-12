@@ -361,9 +361,13 @@ export async function exportJournalPDF(trades: any[]) {
     doc.text("ยังไม่มีข้อมูล", col1X + colW / 2, sessBoxY + 20, { align: "center" });
   }
 
-  // ── RIGHT COLUMN: Strategy Breakdown ──
+  // ── RIGHT COLUMN: Strategy Breakdown (top) + Pie Chart (bottom) ──
   const stratBoxY = chartBoxY;
-  const stratBoxH = pageH - stratBoxY - margin - 5;
+  // Calculate how much space strategies need
+  const maxStratItems = Math.min(strategies.length, 5); // show max 5 in compact mode
+  const stratItemH = 14;
+  const stratListH = maxStratItems * (stratItemH + 3) + 15;
+  const stratBoxH = Math.min(stratListH, 90);
   drawRoundedRect(doc, col2X, stratBoxY, colW, stratBoxH, 2, [22, 33, 28]);
 
   doc.setFontSize(9);
@@ -373,43 +377,58 @@ export async function exportJournalPDF(trades: any[]) {
 
   let stratY = stratBoxY + 13;
   strategies.forEach((s, i) => {
-    if (stratY + 16 > pageH - margin) return; // safety
-    drawRoundedRect(doc, col2X + 4, stratY, colW - 8, 14, 2, [30, 42, 36]);
+    if (stratY + 16 > stratBoxY + stratBoxH - 2) return;
+    drawRoundedRect(doc, col2X + 4, stratY, colW - 8, stratItemH, 2, [30, 42, 36]);
 
-    // rank
     doc.setFontSize(7);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(130, 140, 135);
     doc.text(`#${i + 1}`, col2X + 7, stratY + 5);
 
-    // name
     doc.setFontSize(8);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(220, 230, 225);
     doc.text(s.name, col2X + 15, stratY + 5);
 
-    // profit on right
     const profitColor: [number, number, number] = s.profit >= 0 ? [52, 211, 153] : [248, 113, 113];
     doc.setFontSize(8);
     doc.setFont("Sarabun", "bold");
     doc.setTextColor(...profitColor);
     doc.text(`${s.profit >= 0 ? "+" : ""}$${s.profit.toFixed(2)}`, col2X + colW - 7, stratY + 5, { align: "right" });
 
-    // sub info
     doc.setFontSize(6.5);
     doc.setFont("Sarabun", "normal");
     doc.setTextColor(130, 140, 135);
     doc.text(`ใช้ ${s.count} ครั้ง (${s.pct.toFixed(1)}%)  |  Win Rate: ${s.winRate.toFixed(1)}%`, col2X + 7, stratY + 10);
 
-    // progress bar
     drawProgressBar(doc, col2X + 7, stratY + 11.5, colW - 18, 1.5, s.winRate);
-
-    stratY += 17;
+    stratY += stratItemH + 3;
   });
   if (strategies.length === 0) {
     doc.setFontSize(8);
     doc.setTextColor(130, 140, 135);
     doc.text("ยังไม่มีข้อมูล", col2X + colW / 2, stratBoxY + 25, { align: "center" });
+  }
+
+  // ── Pie Chart: สัดส่วนกลยุทธ์ ──
+  const pieBoxY = stratBoxY + stratBoxH + 4;
+  const pieBoxH = pageH - pieBoxY - margin - 5;
+  drawRoundedRect(doc, col2X, pieBoxY, colW, pieBoxH, 2, [22, 33, 28]);
+
+  doc.setFontSize(9);
+  doc.setFont("Sarabun", "bold");
+  doc.setTextColor(16, 185, 129);
+  doc.text("📊 สัดส่วนกลยุทธ์", col2X + 4, pieBoxY + 7);
+
+  if (strategies.length > 0) {
+    const pieRadius = Math.min((pieBoxH - 16) / 2, 22);
+    const pieCx = col2X + colW / 2;
+    const pieCy = pieBoxY + 10 + pieRadius + 2;
+    drawPieChart(doc, pieCx, pieCy, pieRadius, strategies.map(s => ({ name: s.name, pct: s.pct })));
+  } else {
+    doc.setFontSize(8);
+    doc.setTextColor(130, 140, 135);
+    doc.text("ยังไม่มีข้อมูล", col2X + colW / 2, pieBoxY + 25, { align: "center" });
   }
 
   // Page number

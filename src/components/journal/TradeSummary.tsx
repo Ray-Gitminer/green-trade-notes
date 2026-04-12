@@ -5,6 +5,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarC
 import { TrendingUp, BarChart3, Clock, Target } from "lucide-react";
 import { format } from "date-fns";
 
+const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+
 const SESSION_LABEL: Record<string, string> = {
   asia: "เช้าเอเชีย",
   london: "บ่ายลอนดอน",

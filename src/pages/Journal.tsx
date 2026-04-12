@@ -229,24 +229,6 @@ export default function Journal() {
     toast.info("กำลังสร้างรูปภาพ...");
     try {
       const doc = await exportJournalPDF(filteredTrades);
-      const totalPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        (doc as any).setPage(i);
-        const pageW = doc.internal.pageSize.getWidth();
-        const pageH = doc.internal.pageSize.getHeight();
-        const scale = 2;
-        const canvas = document.createElement("canvas");
-        canvas.width = pageW * scale * (96 / 72);
-        canvas.height = pageH * scale * (96 / 72);
-        const ctx = canvas.getContext("2d")!;
-        ctx.fillStyle = "#0f1714";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const imgData = doc.output("datauristring", { filename: `page-${i}.pdf` });
-        // Use jsPDF's built-in canvas output per page
-        const svgStr = (doc as any).__private__?.getPageSvg?.(i);
-        // Fallback: render full PDF as image via iframe
-      }
-      // Better approach: use pdf.js or convert via blob
       const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
       const pdfUrl = URL.createObjectURL(pdfBlob);
       

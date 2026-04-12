@@ -172,6 +172,7 @@ export default function Journal() {
     });
     setEditingId(trade.id);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {

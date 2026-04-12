@@ -356,12 +356,30 @@ export default function Journal() {
           </Button>
           <Button variant="outline" onClick={handlePreviewPDF} className="border-primary/50 text-primary hover:bg-primary/10">
             <Eye className="h-4 w-4 mr-2" />
-            ดูตัวอย่าง PDF
+            ดูตัวอย่าง
           </Button>
-          <Button variant="outline" onClick={handleDownloadPDF} className="border-primary/50 text-primary hover:bg-primary/10">
-            <FileDown className="h-4 w-4 mr-2" />
-            ดาวน์โหลด PDF
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+                <FileDown className="h-4 w-4 mr-2" />
+                ส่งออก
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDownloadPDF}>
+                <FileDown className="h-4 w-4 mr-2" />
+                ดาวน์โหลด PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportImages}>
+                <ImageIcon className="h-4 w-4 mr-2" />
+                ดาวน์โหลดรูปภาพ
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareImages}>
+                <Share2 className="h-4 w-4 mr-2" />
+                แชร์รูปภาพ
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => { const next = !showForm; setShowForm(next); if (!next) { setEditingId(null); setForm(defaultForm); } else { window.scrollTo({ top: 0, behavior: 'smooth' }); } }} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             {showForm ? "ปิดฟอร์ม" : "เพิ่มบันทึกเทรด"}
@@ -620,10 +638,28 @@ export default function Journal() {
           <DialogHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <DialogTitle className="text-primary">ตัวอย่าง PDF บันทึกการเทรด</DialogTitle>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleDownloadPDF} className="border-primary/50 text-primary hover:bg-primary/10">
-                <Download className="h-4 w-4 mr-2" />
-                ดาวน์โหลด
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+                    <Download className="h-4 w-4 mr-2" />
+                    ดาวน์โหลด
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadPDF}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportImages}>
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    รูปภาพ
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleShareImages}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    แชร์รูปภาพ
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </DialogHeader>
           <div className="flex-1 p-4 pt-0 min-h-0 overflow-auto bg-white rounded-b-lg">

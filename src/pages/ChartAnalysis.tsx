@@ -17,7 +17,7 @@ import {
   Calendar,
   Download,
   FileText,
-  File,
+  File as FileIcon,
   Maximize2,
   Minimize2,
   ZoomIn,

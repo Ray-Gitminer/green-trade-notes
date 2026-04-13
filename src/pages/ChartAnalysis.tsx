@@ -1029,8 +1029,16 @@ export default function ChartAnalysis() {
                     ดูตัวอย่าง PDF
                   </Button>
                   <Button onClick={exportToPDF} variant="outline" className="gap-2">
-                    <File className="h-4 w-4" />
+                    <FileIcon className="h-4 w-4" />
                     ดาวน์โหลด PDF
+                  </Button>
+                  <Button onClick={handleExportImages} variant="outline" className="gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    ดาวน์โหลดรูปภาพ
+                  </Button>
+                  <Button onClick={handleShareImages} variant="outline" className="gap-2">
+                    <Share2 className="h-4 w-4" />
+                    แชร์รูปภาพ
                   </Button>
                 </div>
               </div>

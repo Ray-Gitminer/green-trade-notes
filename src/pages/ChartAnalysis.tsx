@@ -858,6 +858,91 @@ export default function ChartAnalysis() {
     }
   };
 
+  const handleExportImages = async () => {
+    toast({ title: "กำลังสร้างรูปภาพ..." });
+    try {
+      const doc = await generatePDFDocument();
+      if (!doc) return;
+      const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
+      const pdf = await (await getDocument(pdfUrl)).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `chart-analysis-${format(exportStartDate, "yyyy-MM-dd")}-page${i}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }, "image/png");
+      }
+
+      URL.revokeObjectURL(pdfUrl);
+      setExportDialogOpen(false);
+      toast({ title: "ส่งออกรูปภาพสำเร็จ" });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "สร้างรูปภาพไม่สำเร็จ", variant: "destructive" });
+    }
+  };
+
+  const handleShareImages = async () => {
+    toast({ title: "กำลังสร้างรูปภาพสำหรับแชร์..." });
+    try {
+      const doc = await generatePDFDocument();
+      if (!doc) return;
+      const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`;
+      const pdf = await (await getDocument(pdfUrl)).promise;
+
+      const files: File[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+        files.push(new File([blob], `chart-analysis-page${i}.png`, { type: "image/png" }));
+      }
+
+      URL.revokeObjectURL(pdfUrl);
+
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: "บันทึกการวิเคราะห์กราฟ", text: `สรุปการวิเคราะห์ ${format(new Date(), "dd/MM/yyyy")}` });
+        setExportDialogOpen(false);
+        toast({ title: "แชร์สำเร็จ" });
+      } else {
+        toast({ title: "เบราว์เซอร์ไม่รองรับการแชร์ไฟล์ กรุณาดาวน์โหลดแทน", variant: "destructive" });
+      }
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      console.error(e);
+      toast({ title: "แชร์ไม่สำเร็จ", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
       {/* Header */}

@@ -22,6 +22,8 @@ import {
   Minimize2,
   ZoomIn,
   ZoomOut,
+  ImageIcon,
+  Share2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";

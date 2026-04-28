@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { th } from "date-fns/locale";
 import { BookOpen, Plus, AlertTriangle, Trash2, FileDown, Pencil, CalendarIcon, Eye, Download, X, Filter, ImageIcon, Share2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -90,14 +90,14 @@ export default function Journal() {
   // Filtered trades based on date range
   const filteredTrades = useMemo(() => {
     if (!filterStartDate && !filterEndDate) return trades;
+    const start = filterStartDate ? startOfDay(filterStartDate) : undefined;
+    const end = filterEndDate ? endOfDay(filterEndDate) : undefined;
     return trades.filter(t => {
       if (!t.trade_date) return false;
       const d = new Date(t.trade_date);
-      if (filterStartDate && filterEndDate) {
-        return isWithinInterval(d, { start: filterStartDate, end: filterEndDate });
-      }
-      if (filterStartDate) return d >= filterStartDate;
-      if (filterEndDate) return d <= filterEndDate;
+      if (start && end) return d >= start && d <= end;
+      if (start) return d >= start;
+      if (end) return d <= end;
       return true;
     });
   }, [trades, filterStartDate, filterEndDate]);

@@ -80,7 +80,7 @@ export default function Journal() {
       .from("trades")
       .select("*")
       .eq("user_id", user.id)
-      .order("trade_date", { ascending: false });
+      .order("created_at", { ascending: false });
     setTrades(data || []);
     setLoading(false);
   }, [user]);
